@@ -1,5 +1,7 @@
 # git-sync
 
+> 🇰🇷 [한국어 README](./README.ko.md)
+
 **Skill & settings GitHub sync engine.**
 
 ## Prerequisites
