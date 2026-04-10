@@ -4,7 +4,7 @@
 
 ## Goal
 
-git-sync automates GitHub synchronization for skills and User Preferences. After any skill is created/modified or UP is changed, git-sync syncs to dedicated GitHub repositories. Hub-spoke architecture: each skill in its own repo (jasonnamii/{skill-name}).
+git-sync automates GitHub synchronization for skills and User Preferences. After any skill is created/modified or UP is changed, git-sync syncs to dedicated GitHub repositories. Hub-spoke architecture: each skill in its own repo ({GITHUB_USER}/{skill-name}).
 
 ## When & How to Use
 
@@ -14,13 +14,13 @@ Trigger after skill-builder creates/modifies skills or up-manager modifies prefe
 
 | Scenario | Prompt | What Happens |
 |---|---|---|
-| Sync new skill | (Auto after skill-builder) | Detect→rsync to jasonnamii/{name}→commit→push |
+| Sync new skill | (Auto after skill-builder) | Detect→rsync to {GITHUB_USER}/{name}→commit→push |
 | Batch sync | `"Sync skills X, Y, Z."` | Detect changes→rsync all→3 commits→push |
 | UP sync | (Auto after up-manager) | Detect version bump→rsync→commit→push |
 
 ## Key Features
 
-- Hub-spoke repos: jasonnamii/{skill-name} per skill
+- Hub-spoke repos: {GITHUB_USER}/{skill-name} per skill
 - Automatic change detection — no manual file selection
 - rsync + commit + push in one call
 - Protected files: README.md, LICENSE, .gitignore never overwritten
@@ -30,14 +30,14 @@ Trigger after skill-builder creates/modifies skills or up-manager modifies prefe
 
 ## Works With
 
-- **[skill-builder](https://github.com/jasonnamii/skill-builder)** — outputs feed directly to git-sync
-- **[up-manager](https://github.com/jasonnamii/up-manager)** — UP changes flow to git-sync
-- **[autoloop](https://github.com/jasonnamii/autoloop)** — optimized skills synced after mutation
+- **[skill-builder](https://github.com/{GITHUB_USER}/skill-builder)** — outputs feed directly to git-sync
+- **[up-manager](https://github.com/{GITHUB_USER}/up-manager)** — UP changes flow to git-sync
+- **[autoloop](https://github.com/{GITHUB_USER}/autoloop)** — optimized skills synced after mutation
 
 ## Installation
 
 ```bash
-git clone https://github.com/jasonnamii/git-sync.git ~/.claude/skills/git-sync
+git clone https://github.com/{GITHUB_USER}/git-sync.git ~/.claude/skills/git-sync
 ```
 
 ## Update
@@ -50,7 +50,7 @@ Skills placed in `~/.claude/skills/` are automatically available in Claude Code 
 
 ## Part of Cowork Skills
 
-This is one of 25+ custom skills. See the full catalog: [github.com/jasonnamii/cowork-skills](https://github.com/jasonnamii/cowork-skills)
+This is one of 25+ custom skills. See the full catalog: [github.com/{GITHUB_USER}/cowork-skills](https://github.com/{GITHUB_USER}/cowork-skills)
 
 ## License
 

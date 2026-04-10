@@ -33,7 +33,7 @@ rsync -av --delete \
 
 ```bash
 grep -r -i \
-  "jasoncnh@gmail\|oauth\|password=[^*]\|secret_key\|private_key\|Bearer " \
+  "{USER_EMAIL}\|oauth\|password=[^*]\|secret_key\|private_key\|Bearer " \
   "{레포루트}/{skill-name}/" \
   --include="*.md" --include="*.py" --include="*.json" \
   | grep -v "Possible hardcoded\|potential secret\|for pattern in"
@@ -72,5 +72,5 @@ git push
 ✅ {skill-name} 동기화 완료
   변경: {N}개 파일 수정, {M}개 추가, {K}개 삭제
   커밋: {hash 7자리}
-  URL: https://github.com/jasonnamii/{skill-name}
+  URL: https://github.com/{GITHUB_USER}/{skill-name}
 ```

@@ -41,7 +41,7 @@ ls UP_user-preferences_v*.md | grep -v "v{현재버전}" | xargs rm -f
 
 ```bash
 grep -r -i \
-  "jasoncnh@gmail\|oauth\|password=[^*]\|secret_key\|private_key\|Bearer " \
+  "{USER_EMAIL}\|oauth\|password=[^*]\|secret_key\|private_key\|Bearer " \
   "{UP레포}/" \
   --include="*.md" \
   | grep -v "Possible hardcoded\|potential secret\|for pattern in"
@@ -75,5 +75,5 @@ git push
 ✅ user-preferences 동기화 완료
   변경: UP_user-preferences_v{N}.md 수정
   커밋: {hash 7자리}
-  URL: https://github.com/jasonnamii/user-preferences
+  URL: https://github.com/{GITHUB_USER}/user-preferences
 ```

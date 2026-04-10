@@ -74,7 +74,7 @@ cd "{레포루트}/{new-skill}"
 git init
 git add -A
 git commit -m "Initial commit: {new-skill}"
-gh repo create "jasonnamii/{new-skill}" \
+gh repo create "{GITHUB_USER}/{new-skill}" \
   --public --source=. --push \
   --description "{영문 설명}"
 ```

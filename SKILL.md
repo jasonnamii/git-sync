@@ -1,7 +1,7 @@
 ---
 name: git-sync
 description: |
-  스킬·설정 GitHub 동기화 엔진. 스킬 수정/생성 후 해당 레포에 자동 rsync→commit→push. UP 수정 후에도 동기화. 개별 레포 구조(jasonnamii/{skill-name}) 기반.
+  스킬·설정 GitHub 동기화 엔진. 스킬 수정/생성 후 해당 레포에 자동 rsync→commit→push. UP 수정 후에도 동기화. 개별 레포 구조({GITHUB_USER}/{skill-name}) 기반.
   P1: 깃동기화, git sync, 깃싱크, 깃푸시, 레포동기화, 깃허브동기화, 스킬동기화, 스킬업로드.
   P2: 동기화해줘, 푸시해줘, 올려줘, sync, push, upload.
   P3: git sync, repo sync, github push, skill deployment.
@@ -29,19 +29,30 @@ description: |
 
 ## 경로 매핑
 
+### 환경 변수 (실행 시 resolve)
+
+| 변수 | 설명 | 확인 방법 |
+|------|------|----------|
+| `{GITHUB_USER}` | GitHub 계정명 | `gh api user --jq .login` |
+| `{USER_HOME}` | macOS 홈 디렉토리 | `echo $HOME` |
+| `{USER_EMAIL}` | git/계정 이메일 | `git config user.email` |
+| `{PLUGIN_SKILLS_PATH}` | Cowork 스킬 플러그인의 skills/ 경로 | `find "{USER_HOME}/Library/Application Support/Claude/local-agent-mode-sessions/skills-plugin" -maxdepth 3 -name "skills" -type d` |
+
+### 경로 테이블
+
 | 항목 | 값 |
 |------|-----|
-| GitHub 계정 | `jasonnamii` |
-| 스킬 원본 | `/Users/jason/Library/Application Support/Claude/local-agent-mode-sessions/skills-plugin/4784b446-6017-41b8-a732-6fa4618e5175/8cfaf936-a4d8-4573-968e-84bbeeef711f/skills/` |
-| 레포 루트 | `/Users/jason/github-repos/skill-repos/` |
-| 카탈로그 레포 | `/Users/jason/github-repos/cowork-skills/` |
-| UP 원본 | `/Users/jason/Library/CloudStorage/Dropbox/ObsidianVault/Agent-Ops/` |
-| UP 레포 | `/Users/jason/github-repos/skill-repos/user-preferences/` |
+| GitHub 계정 | `{GITHUB_USER}` |
+| 스킬 원본 | `{PLUGIN_SKILLS_PATH}` |
+| 레포 루트 | `{USER_HOME}/github-repos/skill-repos/` |
+| 카탈로그 레포 | `{USER_HOME}/github-repos/cowork-skills/` |
+| UP 원본 | `{USER_HOME}/Library/CloudStorage/Dropbox/ObsidianVault/Agent-Ops/` |
+| UP 레포 | `{USER_HOME}/github-repos/skill-repos/user-preferences/` |
 
 | 대상 | 원본 | 레포 | GitHub URL |
 |------|------|------|-----------|
-| 스킬 | `{스킬원본}/{name}/` | `{레포루트}/{name}/` | `github.com/jasonnamii/{name}` |
-| UP | `{UP원본}/UP_user-preferences_v*.md` + `UP_stability.md` | `{UP레포}/` | `github.com/jasonnamii/user-preferences` |
+| 스킬 | `{스킬원본}/{name}/` | `{레포루트}/{name}/` | `github.com/{GITHUB_USER}/{name}` |
+| UP | `{UP원본}/UP_user-preferences_v*.md` + `UP_stability.md` | `{UP레포}/` | `github.com/{GITHUB_USER}/user-preferences` |
 
 ---
 
