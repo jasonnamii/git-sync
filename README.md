@@ -2,6 +2,13 @@
 
 **Skill & settings GitHub sync engine.**
 
+## Prerequisites
+
+- **Obsidian Vault** — UP source files stored in `Agent-Ops/` within the vault
+- **Desktop Commander MCP** — required for local file operations
+- **GitHub CLI (`gh`)** — authenticated with push access to target repos
+- **Claude Cowork or Claude Code** environment
+
 ## Goal
 
 git-sync automates GitHub synchronization for skills and User Preferences. After any skill is created/modified or UP is changed, git-sync syncs to dedicated GitHub repositories. Hub-spoke architecture: each skill in its own repo ({GITHUB_USER}/{skill-name}).
