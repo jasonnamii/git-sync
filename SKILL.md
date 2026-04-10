@@ -65,6 +65,8 @@ description: |
 
 ## 단일 스킬 동기화 — DC 2회 호출
 
+**정확히 2회의 DC start_process만 사용한다.** ENV resolve·PRE_SYNC_CHECK는 호출 1에서, rsync·민감정보·commit·push는 호출 2의 단일 bash 스크립트 안에서 `&&`로 체이닝한다. 3회 이상으로 분할하지 마라.
+
 ### 호출 1: ENV + PRE_SYNC_CHECK
 
 ```bash
@@ -128,6 +130,8 @@ git diff --cached --quiet && echo "변경 없음 — 이미 최신" || \
 ---
 
 ## UP 동기화 — DC 2회 호출
+
+**정확히 2회의 DC start_process만 사용한다.** 민감정보 검사·commit·push는 호출 2의 단일 bash 스크립트 안에서 `&&`로 체이닝한다. 3회 이상으로 분할하지 마라.
 
 ### 호출 1: 파일 탐색 + 복사
 
