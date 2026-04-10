@@ -1,61 +1,57 @@
 # git-sync
 
-**Skill & Settings GitHub Sync Engine** for Claude Cowork.
+**Skill & settings GitHub sync engine.**
 
-Automatically syncs your Cowork skills and User Preferences (UP) to individual GitHub repositories via `rsync → commit → push`.
+## Goal
 
-## What It Does
+git-sync automates GitHub synchronization for skills and User Preferences. After any skill is created/modified or UP is changed, git-sync syncs to dedicated GitHub repositories. Hub-spoke architecture: each skill in its own repo (jasonnamii/{skill-name}).
 
-- **One-command sync**: After editing or creating a skill, sync it to its dedicated GitHub repo
-- **UP sync**: User Preferences files (versioned `.md`) synced to their own repo with automatic old-version cleanup
-- **Batch sync**: Scan all skills for changes, show diff summary, sync only what changed
-- **New repo creation**: Detects new skills without repos and creates them via `gh repo create`
-- **Safety first**: Mandatory sensitive-info grep scan before every commit; blocks on match
+## When & How to Use
 
-## Hub-Spoke Architecture
+Trigger after skill-builder creates/modifies skills or up-manager modifies preferences. Handles: source detection, rsync, commit, push. Supports single skill sync, UP sync (version-aware), or batch sync with auto change detection.
 
-- `SKILL.md` — Core rules, path mappings, trigger conditions, pipeline overview
-- `references/pipeline-skill.md` — Single skill sync: rsync with `--delete` + excludes
-- `references/pipeline-up.md` — UP sync: file-level copy with version-aware cleanup
-- `references/pipeline-batch.md` — Batch sync + new repo creation flow
-- `references/gotchas.md` — Common pitfalls (sandbox trap, rsync dangers, rate limits)
+## Use Cases
 
-## Key Rules
+| Scenario | Prompt | What Happens |
+|---|---|---|
+| Sync new skill | (Auto after skill-builder) | Detect→rsync to jasonnamii/{name}→commit→push |
+| Batch sync | `"Sync skills X, Y, Z."` | Detect changes→rsync all→3 commits→push |
+| UP sync | (Auto after up-manager) | Detect version bump→rsync→commit→push |
 
-1. **Desktop Commander only** — Cowork sandbox cannot access local git repos
-2. **One-way sync** — Source → repo only, never reverse
-3. **Protect repo metadata** — README, LICENSE, .gitignore excluded from rsync
-4. **Block sensitive data** — Grep scan mandatory before every push
+## Key Features
 
-## Trigger Examples
+- Hub-spoke repos: jasonnamii/{skill-name} per skill
+- Automatic change detection — no manual file selection
+- rsync + commit + push in one call
+- Protected files: README.md, LICENSE, .gitignore never overwritten
+- Sensitive info screening before push
+- Batch sync with individual commits
+- Version-aware UP sync
 
-```
-"깃 동기화"     → sync the last modified skill
-"push해줘"      → same
-"전체 동기화"    → batch scan + sync all changed skills & UP
-```
+## Works With
 
-## Pipeline Flow
+- **[skill-builder](https://github.com/jasonnamii/skill-builder)** — outputs feed directly to git-sync
+- **[up-manager](https://github.com/jasonnamii/up-manager)** — UP changes flow to git-sync
+- **[autoloop](https://github.com/jasonnamii/autoloop)** — optimized skills synced after mutation
 
-### Single Skill
-```
-① Verify source & repo exist
-② rsync --delete (with excludes)
-③ Sensitive info scan
-④ git diff --stat
-⑤ git add -A && commit
-⑥ git push
-⑦ Report
+## Installation
+
+```bash
+git clone https://github.com/jasonnamii/git-sync.git ~/.claude/skills/git-sync
 ```
 
-### UP (User Preferences)
+## Update
+
+```bash
+cd ~/.claude/skills/git-sync && git pull
 ```
-① Find latest version file (glob)
-② cp files + remove old versions
-③ Sensitive info scan
-④ git diff → commit → push → report
-```
+
+Skills placed in `~/.claude/skills/` are automatically available in Claude Code and Cowork sessions.
+
+## Part of Cowork Skills
+
+This is one of 25+ custom skills. See the full catalog: [github.com/jasonnamii/cowork-skills](https://github.com/jasonnamii/cowork-skills)
 
 ## License
 
-MIT
+MIT License — feel free to use, modify, and share.
