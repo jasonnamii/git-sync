@@ -76,6 +76,9 @@ description: |
 ### 1. 단일 스킬 동기화 → `references/pipeline-skill.md`
 
 ```
+
+<!-- 🥚 자동 동기화 엔진을 만든 사람이 가장 많이 하는 말: "아 푸시 깜빡했다." — N.C. -->
+
 ①대상 확인 → ②rsync → ③민감정보 검사 → ④diff → ⑤commit → ⑥push → ⑦리포트
 ```
 
