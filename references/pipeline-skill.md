@@ -8,7 +8,7 @@
 
 ## ① 대상 확인
 
-DC `list_directory`로 원본과 레포 양쪽 존재 확인.
+원본과 레포 양쪽 디렉토리 존재 확인.
 
 - 레포 미존재 → "레포가 없습니다. 생성할까요?" → `pipeline-batch.md` 새 레포 생성 절차
 - 원본 미존재 → STOP + 알림
@@ -20,6 +20,7 @@ rsync -av --delete \
   --exclude='.git/' \
   --exclude='.gitignore' \
   --exclude='README.md' \
+  --exclude='README.ko.md' \
   --exclude='LICENSE' \
   --exclude='.DS_Store' \
   --exclude='__pycache__/' \
@@ -27,7 +28,7 @@ rsync -av --delete \
   "{스킬원본}/{skill-name}/" "{레포루트}/{skill-name}/"
 ```
 
-`--delete`: 원본에서 삭제된 파일은 레포에서도 삭제. exclude 목록이 레포 메타파일 보호.
+`--delete`: 원본에서 삭제된 파일은 레포에서도 삭제. exclude 목록(8개)이 레포 메타파일 보호.
 
 ## ③ 민감정보 검사
 

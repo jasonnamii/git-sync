@@ -20,9 +20,9 @@ description: |
 
 | # | 규칙 | 이유 |
 |---|------|------|
-| 1 | **DC(Desktop Commander)로만 실행** — Cowork 샌드박스 Bash 금지 | 샌드박스는 로컬 git repo 접근 불가 |
+| 1 | **로컬 터미널로만 실행** — Cowork 샌드박스 Bash 금지 | 샌드박스는 로컬 git repo 접근 불가. DC `start_process` 사용 |
 | 2 | **원본→레포 단방향만** — 역방향 금지 | 원본은 skills-plugin이 관리. 역동기화=충돌 |
-| 3 | **README.md·LICENSE·.gitignore 덮어쓰기 금지** | 레포 전용 메타파일 보호 |
+| 3 | **README.md·README.ko.md·LICENSE·.gitignore 덮어쓰기 금지** | 레포 전용 메타파일 보호 |
 | 4 | **민감정보 push 전 차단** — grep 검사 필수 | 개인정보·토큰 유출 방지 |
 
 ---
@@ -76,13 +76,10 @@ description: |
 ### 1. 단일 스킬 동기화 → `references/pipeline-skill.md`
 
 ```
-
-<!-- 🥚 자동 동기화 엔진을 만든 사람이 가장 많이 하는 말: "아 푸시 깜빡했다." — N.C. -->
-
 ①대상 확인 → ②rsync → ③민감정보 검사 → ④diff → ⑤commit → ⑥push → ⑦리포트
 ```
 
-핵심: rsync `--delete` + exclude(README/LICENSE/.gitignore). 민감정보 매치 시 STOP.
+핵심: rsync `--delete` + exclude(README.md/README.ko.md/LICENSE/.gitignore). 민감정보 매치 시 STOP.
 
 ### 2. UP 동기화 → `references/pipeline-up.md`
 
@@ -99,6 +96,14 @@ description: |
 ```
 
 핵심: 3개 이하 병렬 OK, 4개 이상 순차(rate limit). 새 스킬은 gh repo create.
+
+### 4. 기존 레포 README 일괄 생성 → `references/pipeline-batch.md`
+
+```
+①대상 스캔(EN/KO 유무) → ②리스트 출력 + 컨펌 → ③README 생성 → ④commit + push
+```
+
+핵심: README.md(EN) + README.ko.md(KO) 이중언어. 템플릿 → `references/readme-templates.md`.
 
 ---
 
