@@ -45,8 +45,8 @@ diff -q "{UP원본}/UP_stability.md" \
 
 ### ③ 실행
 
-- 스킬 → `pipeline-skill.md` 절차
-- UP → `pipeline-up.md` 절차
+- 스킬 → 허브 SKILL.md의 「단일 스킬 동기화」 절차
+- UP → 허브 SKILL.md의 「UP 동기화」 절차
 - 3개 이하: 병렬 OK (로컬 터미널 동시 호출)
 - 4개 이상: 순차 실행 (GitHub rate limit 방지)
 
