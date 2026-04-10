@@ -36,6 +36,7 @@ description: |
 | `{GITHUB_USER}` | GitHub 계정명 | `gh api user --jq .login` |
 | `{USER_HOME}` | macOS 홈 디렉토리 | `echo $HOME` |
 | `{USER_EMAIL}` | git/계정 이메일 | `git config user.email` |
+| `{VAULT_PATH}` | Obsidian 볼트 루트 경로 | CLAUDE.md MOUNT 설정 참조 |
 | `{PLUGIN_SKILLS_PATH}` | Cowork 스킬 플러그인의 skills/ 경로 | `find "{USER_HOME}/Library/Application Support/Claude/local-agent-mode-sessions/skills-plugin" -maxdepth 3 -name "skills" -type d` |
 
 ### 경로 테이블
@@ -46,7 +47,7 @@ description: |
 | 스킬 원본 | `{PLUGIN_SKILLS_PATH}` |
 | 레포 루트 | `{USER_HOME}/github-repos/skill-repos/` |
 | 카탈로그 레포 | `{USER_HOME}/github-repos/cowork-skills/` |
-| UP 원본 | `{USER_HOME}/Library/CloudStorage/Dropbox/ObsidianVault/Agent-Ops/` |
+| UP 원본 | `{VAULT_PATH}/Agent-Ops/` |
 | UP 레포 | `{USER_HOME}/github-repos/skill-repos/user-preferences/` |
 
 | 대상 | 원본 | 레포 | GitHub URL |
