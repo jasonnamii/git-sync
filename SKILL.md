@@ -113,7 +113,8 @@ rsync -av --delete \
   "{plugin_skills_path}/{skill-name}/" ./ && \
 
 # 민감정보 검사 (if-then 패턴: grep 매치=민감정보 발견=실패)
-if grep -r -i -l \
+# --exclude='SKILL.md': 검사 패턴 자체를 포함하는 SKILL.md의 false positive 방지
+if grep -r -i -l --exclude='SKILL.md' \
   'oauth\|password=[^*]\|secret_key\|private_key\|Bearer \|api_key\|api_secret\|AKIA[0-9A-Z]\|ghp_[a-zA-Z0-9]\|sk-[a-zA-Z0-9]\|gho_\|glpat-\|xox[bpoas]-' \
   --include="*.md" --include="*.py" --include="*.json" . 2>/dev/null; then
   echo "⚠️ 민감정보 발견 — STOP"; exit 1
@@ -151,7 +152,8 @@ rsync -av --delete \
   "{plugin_skills_path}/{skill-name}/" ./ && \
 
 # 민감정보 검사
-if grep -r -i -l \
+# --exclude='SKILL.md': 검사 패턴 자체를 포함하는 SKILL.md의 false positive 방지
+if grep -r -i -l --exclude='SKILL.md' \
   'oauth\|password=[^*]\|secret_key\|private_key\|Bearer \|api_key\|api_secret\|AKIA[0-9A-Z]\|ghp_[a-zA-Z0-9]\|sk-[a-zA-Z0-9]\|gho_\|glpat-\|xox[bpoas]-' \
   --include="*.md" --include="*.py" --include="*.json" . 2>/dev/null; then
   echo "⚠️ 민감정보 발견 — STOP"; exit 1
@@ -242,3 +244,4 @@ git diff --cached --quiet && echo "변경 없음" || \
 | push 실패 뺑뺑이 | 1회 재시도 후 STOP. 자동 복구 루프 금지 |
 | ENV resolve 실패 | 추측 진행 금지. 실패 필드 보고 + STOP |
 | `! grep` 민감정보 검사 | `! grep`은 `&&` 체인에서 exit code 꼬임. **if-then 패턴** 사용: `if grep ...; then exit 1; fi` |
+| 민감정보 검사 false positive | git-sync 등 SKILL.md 자체에 grep 패턴 문자열이 포함된 스킬 → `--exclude='SKILL.md'`로 자기 자신 제외 |
