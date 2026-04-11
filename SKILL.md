@@ -63,9 +63,15 @@ description: |
 
 ---
 
-## 단일 스킬 동기화 — DC 2회 호출
+## 단일 스킬 동기화
 
-**정확히 2회의 DC start_process만 사용한다.** ENV resolve·PRE_SYNC_CHECK는 호출 1에서, rsync·민감정보·commit·push는 호출 2의 단일 bash 스크립트 안에서 `&&`로 체이닝한다. 3회 이상으로 분할하지 마라.
+**DC 호출 수:** ENV 캐시 유무 × 모드에 따라 결정.
+
+| 조건 | DC 호출 | 설명 |
+|------|---------|------|
+| ENV 캐시 없음 (첫 호출) | 2회 | 호출 1: ENV + PRE_SYNC_CHECK → 호출 2: rsync + commit + push |
+| ENV 캐시 있음 + auto_mode=false | 2회 | 호출 1: PRE_SYNC_CHECK → 호출 2: rsync + commit + push |
+| ENV 캐시 있음 + auto_mode=true | **1회** | 통합: PRE_SYNC_CHECK + rsync + commit + push (삭제 감지 시 자동 중단) |
 
 ### 호출 1: ENV + PRE_SYNC_CHECK
 
@@ -107,7 +113,46 @@ rsync -av --delete \
   "{plugin_skills_path}/{skill-name}/" ./ && \
 
 # 민감정보 검사 (if-then 패턴: grep 매치=민감정보 발견=실패)
-if grep -r -i -l 'oauth\|password=[^*]\|secret_key\|private_key\|Bearer ' \
+if grep -r -i -l \
+  'oauth\|password=[^*]\|secret_key\|private_key\|Bearer \|api_key\|api_secret\|AKIA[0-9A-Z]\|ghp_[a-zA-Z0-9]\|sk-[a-zA-Z0-9]\|gho_\|glpat-\|xox[bpoas]-' \
+  --include="*.md" --include="*.py" --include="*.json" . 2>/dev/null; then
+  echo "⚠️ 민감정보 발견 — STOP"; exit 1
+fi && \
+
+# commit + push
+git add -A && \
+git diff --cached --quiet && echo "변경 없음 — 이미 최신" || \
+(git commit -m "Update {skill-name}: {변경요약}" && git push)
+```
+
+### 통합 1회 호출 (ENV 캐시 + auto_mode=true)
+
+```bash
+cd "{repo_root}/{skill-name}" && \
+
+# PRE_SYNC_CHECK 인라인 — 삭제 감지 시 자동 중단
+DELETES=$(rsync -avn --delete \
+  --exclude='.git/' --exclude='.gitignore' \
+  --exclude='README.md' --exclude='README.ko.md' \
+  --exclude='LICENSE' --exclude='.DS_Store' \
+  --exclude='__pycache__/' --exclude='*.pyc' \
+  "{plugin_skills_path}/{skill-name}/" ./ | grep '^deleting ' || true) && \
+
+if [ -n "$DELETES" ]; then
+  echo "⚠️ 삭제 감지 — auto_mode에서도 중단:"; echo "$DELETES"; exit 1
+fi && \
+
+# rsync 실행
+rsync -av --delete \
+  --exclude='.git/' --exclude='.gitignore' \
+  --exclude='README.md' --exclude='README.ko.md' \
+  --exclude='LICENSE' --exclude='.DS_Store' \
+  --exclude='__pycache__/' --exclude='*.pyc' \
+  "{plugin_skills_path}/{skill-name}/" ./ && \
+
+# 민감정보 검사
+if grep -r -i -l \
+  'oauth\|password=[^*]\|secret_key\|private_key\|Bearer \|api_key\|api_secret\|AKIA[0-9A-Z]\|ghp_[a-zA-Z0-9]\|sk-[a-zA-Z0-9]\|gho_\|glpat-\|xox[bpoas]-' \
   --include="*.md" --include="*.py" --include="*.json" . 2>/dev/null; then
   echo "⚠️ 민감정보 발견 — STOP"; exit 1
 fi && \
@@ -120,7 +165,7 @@ git diff --cached --quiet && echo "변경 없음 — 이미 최신" || \
 
 **에러 처리:** push 실패 → 1회 `git pull --rebase && git push` 재시도. 2회 실패 → STOP.
 
-**배치 (3개 이하):** 독립 스킬이면 for 루프로 호출 2를 1회에 묶을 수 있다. 4개+ → 순차.
+**배치:** push-only 6개 이하 병렬. `gh api` 호출 포함 시 3개 이하. 7개+ 순차.
 
 ### 리포트
 
@@ -161,7 +206,8 @@ ls UP_user-preferences_v*.md 2>/dev/null | grep -v "$CURRENT" | xargs rm -f
 cd "{repo_root}/user-preferences" && \
 
 # 민감정보 검사 (if-then 패턴)
-if grep -r -i -l 'oauth\|password=[^*]\|secret_key\|private_key\|Bearer ' \
+if grep -r -i -l \
+  'oauth\|password=[^*]\|secret_key\|private_key\|Bearer \|api_key\|api_secret\|AKIA[0-9A-Z]\|ghp_[a-zA-Z0-9]\|sk-[a-zA-Z0-9]\|gho_\|glpat-\|xox[bpoas]-' \
   --include="*.md" . 2>/dev/null; then
   echo "⚠️ 민감정보 발견 — STOP"; exit 1
 fi && \
@@ -191,7 +237,7 @@ git diff --cached --quiet && echo "변경 없음" || \
 | Cowork Bash로 git push | 샌드박스라 실패. DC start_process만 사용 |
 | rsync --delete에서 exclude 누락 | README/LICENSE/.gitignore 8개 항목 항상 포함 |
 | skills-plugin UUID 변경 | Cowork 재설치 시 변경 가능. find로 동적 탐색 |
-| 동시 push 4개+ | GitHub rate limit. 3개 이하 병렬, 4개+ 순차 |
+| 동시 push 6개+ | push-only 6개 이하 병렬, API 호출 포함 3개 이하, 7개+ 순차 |
 | UP 버전 파일명 변경 | glob `v*.md`로 탐색, 구버전 자동 정리 |
 | push 실패 뺑뺑이 | 1회 재시도 후 STOP. 자동 복구 루프 금지 |
 | ENV resolve 실패 | 추측 진행 금지. 실패 필드 보고 + STOP |

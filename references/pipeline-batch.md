@@ -47,8 +47,9 @@ diff -q "{UP원본}/UP_stability.md" \
 
 - 스킬 → 허브 SKILL.md의 「단일 스킬 동기화」 절차
 - UP → 허브 SKILL.md의 「UP 동기화」 절차
-- 3개 이하: 병렬 OK (로컬 터미널 동시 호출)
-- 4개 이상: 순차 실행 (GitHub rate limit 방지)
+- push-only 6개 이하: 병렬 OK (git protocol은 API rate limit 대상 아님)
+- `gh api` 호출 포함 3개 이하: 병렬 (REST API rate limit 방지)
+- 7개 이상: 순차 실행
 
 ---
 
@@ -129,4 +130,4 @@ git commit -m "Add bilingual README (EN/KO)"
 git push
 ```
 
-3개 이하 병렬 OK, 4개 이상 순차.
+push-only 6개 이하 병렬 OK, `gh api` 포함 3개 이하, 7개+ 순차.
