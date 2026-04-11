@@ -29,7 +29,7 @@ description: |
 
 ## ENV_CACHE
 
-첫 발동에서 resolve → 세션 내 캐싱. 2회차부터 스킵.
+첫 발동에서 resolve → **에이전트 대화 컨텍스트에 보관**. 세션 종료 시 소멸. 2회차 호출 시 캐시 존재 확인 → 없으면 재resolve.
 
 | 필드 | 확인 방법 |
 |------|----------|
@@ -39,7 +39,7 @@ description: |
 | `repo_root` | `$HOME/github-repos/skill-repos/` |
 | `auto_mode` | 기본 false. "앞으로 자동으로 해" → true (세션 내) |
 
-**resolve 실패 시:** 해당 필드 보고 + STOP. 추측으로 진행 금지.
+**resolve 실패 시:** 해당 필드 보고 + STOP. 추측으로 진행 금지. `plugin_skills_path` find 실패 시: Cowork 재설치로 UUID 변경 가능성 안내 + STOP.
 
 ---
 
@@ -60,6 +60,19 @@ description: |
 | up-manager 수정 완료 | UP 동기화 제안 |
 | 형이 직접 요청 | 즉시 실행 |
 | "전체 동기화" | → `references/pipeline-batch.md` |
+
+---
+
+## 공통 rsync exclude
+
+모든 rsync 호출이 이 변수를 참조한다. **단일 수정점(Single Point of Truth).**
+
+```bash
+EXCLUDES="--exclude='.git/' --exclude='.gitignore' \
+  --exclude='README.md' --exclude='README.ko.md' \
+  --exclude='LICENSE' --exclude='.DS_Store' \
+  --exclude='__pycache__/' --exclude='*.pyc'"
+```
 
 ---
 
@@ -86,12 +99,7 @@ SRC="{plugin_skills_path}/{skill-name}" && \
 [ -d "$REPO/.git" ] || { echo "ERROR: 레포 없음 — gh repo create 필요"; exit 1; } && \
 
 # PRE_SYNC_CHECK: 삭제 예정 파일 확인
-rsync -avn --delete \
-  --exclude='.git/' --exclude='.gitignore' \
-  --exclude='README.md' --exclude='README.ko.md' \
-  --exclude='LICENSE' --exclude='.DS_Store' \
-  --exclude='__pycache__/' --exclude='*.pyc' \
-  "$SRC/" "$REPO/" | grep '^deleting '
+eval rsync -avn --delete $EXCLUDES "$SRC/" "$REPO/" | grep '^deleting '
 ```
 
 **판정:**
@@ -105,12 +113,7 @@ rsync -avn --delete \
 cd "{repo_root}/{skill-name}" && \
 
 # rsync
-rsync -av --delete \
-  --exclude='.git/' --exclude='.gitignore' \
-  --exclude='README.md' --exclude='README.ko.md' \
-  --exclude='LICENSE' --exclude='.DS_Store' \
-  --exclude='__pycache__/' --exclude='*.pyc' \
-  "{plugin_skills_path}/{skill-name}/" ./ && \
+eval rsync -av --delete $EXCLUDES "{plugin_skills_path}/{skill-name}/" ./ && \
 
 # 민감정보 검사 → scripts/secret-scan.sh (패턴·제외·호환성 로직 일원화)
 bash scripts/secret-scan.sh . || exit 1 && \
@@ -127,11 +130,7 @@ git diff --cached --quiet && echo "변경 없음 — 이미 최신" || \
 cd "{repo_root}/{skill-name}" && \
 
 # PRE_SYNC_CHECK 인라인 — 삭제 감지 시 자동 중단
-DELETES=$(rsync -avn --delete \
-  --exclude='.git/' --exclude='.gitignore' \
-  --exclude='README.md' --exclude='README.ko.md' \
-  --exclude='LICENSE' --exclude='.DS_Store' \
-  --exclude='__pycache__/' --exclude='*.pyc' \
+DELETES=$(eval rsync -avn --delete $EXCLUDES \
   "{plugin_skills_path}/{skill-name}/" ./ | grep '^deleting ' || true) && \
 
 if [ -n "$DELETES" ]; then
@@ -139,12 +138,7 @@ if [ -n "$DELETES" ]; then
 fi && \
 
 # rsync 실행
-rsync -av --delete \
-  --exclude='.git/' --exclude='.gitignore' \
-  --exclude='README.md' --exclude='README.ko.md' \
-  --exclude='LICENSE' --exclude='.DS_Store' \
-  --exclude='__pycache__/' --exclude='*.pyc' \
-  "{plugin_skills_path}/{skill-name}/" ./ && \
+eval rsync -av --delete $EXCLUDES "{plugin_skills_path}/{skill-name}/" ./ && \
 
 # 민감정보 검사 → scripts/secret-scan.sh
 bash scripts/secret-scan.sh . || exit 1 && \
@@ -197,18 +191,16 @@ ls UP_user-preferences_v*.md 2>/dev/null | grep -v "$CURRENT" | xargs rm -f
 ```bash
 cd "{repo_root}/user-preferences" && \
 
-# 민감정보 검사 (UP 레포는 SKILL.md 없어 false positive 없음 → 인라인 유지)
-if grep -r -i -E -l \
-  'oauth|password=[^*]|secret_key|private_key|Bearer |api_key|api_secret|AKIA[0-9A-Z]{16}|ghp_[a-zA-Z0-9]{36}|sk-[a-zA-Z0-9]{20}|gho_|glpat-|xox[bpoas]-' \
-  --include="*.md" . 2>/dev/null; then
-  echo "⚠️ 민감정보 발견 — STOP"; exit 1
-fi && \
+# 민감정보 검사 → secret-scan.sh 통합 (--no-skip-skill-md: UP 레포에 SKILL.md 없으므로 스킵 불필요)
+bash "{repo_root}/{any-skill-with-scripts}/scripts/secret-scan.sh" . || exit 1 && \
 
 # commit + push
 git add -A && \
 git diff --cached --quiet && echo "변경 없음" || \
 (git commit -m "Update UP: {버전정보}" && git push)
 ```
+
+**참고:** UP 레포에는 SKILL.md가 없으므로 secret-scan.sh의 SKILL.md 제외 로직이 자연스럽게 무해(no-op)하다. 별도 플래그 불필요 — 동일 스크립트, 동일 패턴.
 
 ---
 
@@ -233,4 +225,5 @@ git diff --cached --quiet && echo "변경 없음" || \
 | UP 버전 파일명 변경 | glob `v*.md`로 탐색, 구버전 자동 정리 |
 | push 실패 뺑뺑이 | 1회 재시도 후 STOP. 자동 복구 루프 금지 |
 | ENV resolve 실패 | 추측 진행 금지. 실패 필드 보고 + STOP |
-| 민감정보 검사 | 스킬 동기화: `bash scripts/secret-scan.sh .` 사용. 인라인 grep 금지 — SKILL.md 자기참조 false positive + BSD/GNU grep `--exclude`/`--include` 우선순위 불일치 + `&&` 체인 exit code 꼬임. UP 동기화: SKILL.md 없으므로 인라인 유지 가능 |
+| 민감정보 검사 | **스킬·UP 모두** `bash scripts/secret-scan.sh .` 사용. 인라인 grep 금지 — SKILL.md 자기참조 false positive + BSD/GNU grep 호환성 + exit code 꼬임. UP 레포에 SKILL.md 없으므로 제외 로직이 자연스럽게 no-op |
+| rsync exclude 중복 | `$EXCLUDES` 공통 변수 참조. 개별 블록에 직접 나열 금지 — 수정 시 불일치 발생 |
