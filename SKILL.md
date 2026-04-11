@@ -39,7 +39,17 @@ description: |
 | `repo_root` | `$HOME/github-repos/skill-repos/` |
 | `auto_mode` | 기본 false. "앞으로 자동으로 해" → true (세션 내) |
 
-**resolve 실패 시:** 해당 필드 보고 + STOP. 추측으로 진행 금지. `plugin_skills_path` find 실패 시: Cowork 재설치로 UUID 변경 가능성 안내 + STOP.
+**resolve 실패 시:** 해당 필드 보고 + STOP. 추측으로 진행 금지.
+
+```
+❌ ENV resolve 실패
+  실패 필드: {필드명}
+  실행 명령: {시도한 명령}
+  에러: {에러 메시지}
+  → {필드별 복구 안내}
+```
+
+`plugin_skills_path` find 실패 시: Cowork 재설치로 UUID 변경 가능성 안내. `github_user` 실패 시: `gh auth status`로 인증 상태 확인 안내.
 
 ---
 
@@ -118,10 +128,11 @@ eval rsync -av --delete $EXCLUDES "{plugin_skills_path}/{skill-name}/" ./ && \
 # 민감정보 검사 → scripts/secret-scan.sh (패턴·제외·호환성 로직 일원화)
 bash scripts/secret-scan.sh . || exit 1 && \
 
-# commit + push
+# commit + push (push 실패 시 1회 재시도)
 git add -A && \
 git diff --cached --quiet && echo "변경 없음 — 이미 최신" || \
-(git commit -m "Update {skill-name}: {변경요약}" && git push)
+(git commit -m "Update {skill-name}: {변경요약}" && \
+ git push || (git pull --rebase && git push) || { echo "❌ push 2회 실패 — STOP"; exit 1; })
 ```
 
 ### 통합 1회 호출 (ENV 캐시 + auto_mode=true)
@@ -143,13 +154,14 @@ eval rsync -av --delete $EXCLUDES "{plugin_skills_path}/{skill-name}/" ./ && \
 # 민감정보 검사 → scripts/secret-scan.sh
 bash scripts/secret-scan.sh . || exit 1 && \
 
-# commit + push
+# commit + push (push 실패 시 1회 재시도)
 git add -A && \
 git diff --cached --quiet && echo "변경 없음 — 이미 최신" || \
-(git commit -m "Update {skill-name}: {변경요약}" && git push)
+(git commit -m "Update {skill-name}: {변경요약}" && \
+ git push || (git pull --rebase && git push) || { echo "❌ push 2회 실패 — STOP"; exit 1; })
 ```
 
-**에러 처리:** push 실패 → 1회 `git pull --rebase && git push` 재시도. 2회 실패 → STOP.
+**에러 처리:** push 재시도 로직이 코드블록에 내장. 2회 실패 → STOP.
 
 **배치:** push-only 6개 이하 병렬. `gh api` 호출 포함 시 3개 이하. 7개+ 순차.
 
@@ -191,16 +203,25 @@ ls UP_user-preferences_v*.md 2>/dev/null | grep -v "$CURRENT" | xargs rm -f
 ```bash
 cd "{repo_root}/user-preferences" && \
 
-# 민감정보 검사 → secret-scan.sh 통합 (--no-skip-skill-md: UP 레포에 SKILL.md 없으므로 스킵 불필요)
-bash "{repo_root}/{any-skill-with-scripts}/scripts/secret-scan.sh" . || exit 1 && \
+# 민감정보 검사 → git-sync 레포의 secret-scan.sh 사용 (UP 레포에는 scripts/ 없음)
+bash "{repo_root}/git-sync/scripts/secret-scan.sh" . || exit 1 && \
 
-# commit + push
+# commit + push (push 실패 시 1회 재시도)
 git add -A && \
 git diff --cached --quiet && echo "변경 없음" || \
-(git commit -m "Update UP: {버전정보}" && git push)
+(git commit -m "Update UP: {버전정보}" && \
+ git push || (git pull --rebase && git push) || { echo "❌ push 2회 실패 — STOP"; exit 1; })
 ```
 
 **참고:** UP 레포에는 SKILL.md가 없으므로 secret-scan.sh의 SKILL.md 제외 로직이 자연스럽게 무해(no-op)하다. 별도 플래그 불필요 — 동일 스크립트, 동일 패턴.
+
+**리포트:** UP 동기화도 동일한 표준 리포트 형식을 출력한다:
+```
+✅ user-preferences 동기화 완료
+  변경: {N}파일 수정, {M}추가, {K}삭제
+  커밋: {hash 7자리}
+  URL: https://github.com/{github_user}/user-preferences
+```
 
 ---
 
@@ -225,5 +246,5 @@ git diff --cached --quiet && echo "변경 없음" || \
 | UP 버전 파일명 변경 | glob `v*.md`로 탐색, 구버전 자동 정리 |
 | push 실패 뺑뺑이 | 1회 재시도 후 STOP. 자동 복구 루프 금지 |
 | ENV resolve 실패 | 추측 진행 금지. 실패 필드 보고 + STOP |
-| 민감정보 검사 | **스킬·UP 모두** `bash scripts/secret-scan.sh .` 사용. 인라인 grep 금지 — SKILL.md 자기참조 false positive + BSD/GNU grep 호환성 + exit code 꼬임. UP 레포에 SKILL.md 없으므로 제외 로직이 자연스럽게 no-op |
+| 민감정보 검사 | **스킬:** `bash scripts/secret-scan.sh .` (레포 내 스크립트). **UP:** `bash "{repo_root}/git-sync/scripts/secret-scan.sh" .` (git-sync 레포 참조). 인라인 grep 금지 — SKILL.md 자기참조 false positive + BSD/GNU grep 호환성 + exit code 꼬임 |
 | rsync exclude 중복 | `$EXCLUDES` 공통 변수 참조. 개별 블록에 직접 나열 금지 — 수정 시 불일치 발생 |
