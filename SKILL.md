@@ -24,7 +24,6 @@ description: |
 | 2 | **원본→레포 단방향** — 역방향 금지 | 원본은 skills-plugin 관리. 역동기화=충돌 |
 | 3 | **README/LICENSE/.gitignore 보호** — rsync exclude 필수 | 레포 전용 메타파일 |
 | 4 | **에러 하드캡** — push/rsync 실패 시 1회 재시도. 2회 실패 → STOP + 에러 보고. 자동 복구 루프 금지 | 무한 재시도 방지 |
-
 ---
 
 ## ENV_CACHE
@@ -75,13 +74,18 @@ description: |
 
 ## 공통 rsync exclude
 
-모든 rsync 호출이 이 변수를 참조한다. **단일 수정점(Single Point of Truth).**
+모든 rsync 호출이 이 플래그 목록을 직접 사용한다. **단일 수정점(Single Point of Truth).**
+
+⚠ `plugin_skills_path`에 공백(`Application Support`)이 포함되어 있다. `eval` + 문자열 변수 조합은 공백 경로를 분리시키므로 **금지**. 반드시 개별 플래그를 직접 나열한다.
 
 ```bash
-EXCLUDES="--exclude='.git/' --exclude='.gitignore' \
+# 모든 rsync 호출에 이 플래그들을 직접 붙인다 (eval 금지)
+rsync [flags] \
+  --exclude='.git/' --exclude='.gitignore' \
   --exclude='README.md' --exclude='README.ko.md' \
   --exclude='LICENSE' --exclude='.DS_Store' \
-  --exclude='__pycache__/' --exclude='*.pyc'"
+  --exclude='__pycache__/' --exclude='*.pyc' \
+  "$SRC/" "$DEST/"
 ```
 
 ---
@@ -108,8 +112,13 @@ SRC="{plugin_skills_path}/{skill-name}" && \
 [ -d "$SRC" ] || { echo "ERROR: 원본 없음"; exit 1; } && \
 [ -d "$REPO/.git" ] || { echo "ERROR: 레포 없음 — gh repo create 필요"; exit 1; } && \
 
-# PRE_SYNC_CHECK: 삭제 예정 파일 확인
-eval rsync -avn --delete $EXCLUDES "$SRC/" "$REPO/" | grep '^deleting '
+# PRE_SYNC_CHECK: 삭제 예정 파일 확인 (eval 금지 — 공백 경로 안전)
+rsync -avn --delete \
+  --exclude='.git/' --exclude='.gitignore' \
+  --exclude='README.md' --exclude='README.ko.md' \
+  --exclude='LICENSE' --exclude='.DS_Store' \
+  --exclude='__pycache__/' --exclude='*.pyc' \
+  "$SRC/" "$REPO/" | grep '^deleting '
 ```
 
 **판정:**
@@ -122,8 +131,13 @@ eval rsync -avn --delete $EXCLUDES "$SRC/" "$REPO/" | grep '^deleting '
 ```bash
 cd "{repo_root}/{skill-name}" && \
 
-# rsync
-eval rsync -av --delete $EXCLUDES "{plugin_skills_path}/{skill-name}/" ./ && \
+# rsync (eval 금지 — 공백 경로 안전)
+rsync -av --delete \
+  --exclude='.git/' --exclude='.gitignore' \
+  --exclude='README.md' --exclude='README.ko.md' \
+  --exclude='LICENSE' --exclude='.DS_Store' \
+  --exclude='__pycache__/' --exclude='*.pyc' \
+  "{plugin_skills_path}/{skill-name}/" ./ && \
 
 # 민감정보 검사 → 레포 내 scripts/ 우선, 없으면 git-sync 레포 폴백
 SCAN="scripts/secret-scan.sh"; [ -f "$SCAN" ] || SCAN="{repo_root}/git-sync/scripts/secret-scan.sh"
@@ -141,16 +155,25 @@ git diff --cached --quiet && echo "변경 없음 — 이미 최신" || \
 ```bash
 cd "{repo_root}/{skill-name}" && \
 
-# PRE_SYNC_CHECK 인라인 — 삭제 감지 시 자동 중단
-DELETES=$(eval rsync -avn --delete $EXCLUDES \
+# PRE_SYNC_CHECK 인라인 — 삭제 감지 시 자동 중단 (eval 금지 — 공백 경로 안전)
+DELETES=$(rsync -avn --delete \
+  --exclude='.git/' --exclude='.gitignore' \
+  --exclude='README.md' --exclude='README.ko.md' \
+  --exclude='LICENSE' --exclude='.DS_Store' \
+  --exclude='__pycache__/' --exclude='*.pyc' \
   "{plugin_skills_path}/{skill-name}/" ./ | grep '^deleting ' || true) && \
 
 if [ -n "$DELETES" ]; then
   echo "⚠️ 삭제 감지 — auto_mode에서도 중단:"; echo "$DELETES"; exit 1
 fi && \
 
-# rsync 실행
-eval rsync -av --delete $EXCLUDES "{plugin_skills_path}/{skill-name}/" ./ && \
+# rsync 실행 (eval 금지 — 공백 경로 안전)
+rsync -av --delete \
+  --exclude='.git/' --exclude='.gitignore' \
+  --exclude='README.md' --exclude='README.ko.md' \
+  --exclude='LICENSE' --exclude='.DS_Store' \
+  --exclude='__pycache__/' --exclude='*.pyc' \
+  "{plugin_skills_path}/{skill-name}/" ./ && \
 
 # 민감정보 검사 → 레포 내 scripts/ 우선, 없으면 git-sync 레포 폴백
 SCAN="scripts/secret-scan.sh"; [ -f "$SCAN" ] || SCAN="{repo_root}/git-sync/scripts/secret-scan.sh"
@@ -249,4 +272,5 @@ git diff --cached --quiet && echo "변경 없음" || \
 | push 실패 뺑뺑이 | 1회 재시도 후 STOP. 자동 복구 루프 금지 |
 | ENV resolve 실패 | 추측 진행 금지. 실패 필드 보고 + STOP |
 | 민감정보 검사 | **스킬:** `bash scripts/secret-scan.sh .` (레포 내 스크립트). **레포에 scripts/ 없으면:** `bash "{repo_root}/git-sync/scripts/secret-scan.sh" .` (git-sync 레포 폴백). **UP:** 동일 폴백 경로. 인라인 grep 금지 — SKILL.md 자기참조 false positive + BSD/GNU grep 호환성 + exit code 꼬임 |
-| rsync exclude 중복 | `$EXCLUDES` 공통 변수 참조. 개별 블록에 직접 나열 금지 — 수정 시 불일치 발생 |
+| rsync exclude 중복 | §공통 rsync exclude의 플래그 목록이 유일 원본. 코드블록별 복사이므로 수정 시 전체 동기 필수 |
+| eval + $EXCLUDES | **금지**. `plugin_skills_path`에 공백(`Application Support`)이 포함되어 eval이 경로를 분리시킴. 개별 --exclude 플래그 직접 나열만 허용 |
