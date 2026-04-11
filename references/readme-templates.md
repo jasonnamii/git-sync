@@ -9,41 +9,77 @@
 | 추출 대상 | 소스 | 변환 |
 |----------|------|------|
 | `{skill-name}` | YAML `name:` | 그대로 |
-| `{title-en}` | name을 Title Case로 | `hit-skill` → `Hit Skill` |
-| `{title-ko}` | SKILL.md 첫 번째 `#` 제목에서 한글 부분 | `# Git Sync — 스킬·설정 GitHub 동기화` → `스킬·설정 GitHub 동기화` |
-| `{desc-en}` | description의 첫 문장을 영어로 요약 (1-2줄) | SKILL.md 본문 참조하여 작성 |
-| `{desc-ko}` | description의 첫 문장 (한글 원문) | 그대로 |
-| `{features}` | SKILL.md 본문에서 핵심 기능 3-5개 추출 | 불릿 리스트 |
-| `{structure}` | 디렉토리 `tree` 출력 | `tree -I '.git' "{레포루트}/{skill-name}"` |
+| `{desc-en}` | description 첫 문장 + SKILL.md 본문 참조하여 자연스러운 영어로 작성 (1-2줄) | 번역체 금지 |
+| `{desc-ko}` | description 첫 문장 (한글 원문) | 그대로 |
+| `{goal-en}` | SKILL.md 핵심 목적을 2-3문장 영어로 | 왜 이 스킬이 필요한지, 무엇을 해결하는지 |
+| `{goal-ko}` | 위와 동일 한글 | |
+| `{when-how-en}` | 발동 조건 + 사용 방법 2-3문장 | |
+| `{use-cases}` | 3-4행 테이블: Scenario / Prompt / What Happens | 실제 프롬프트 예시 포함 |
+| `{features}` | SKILL.md 본문에서 핵심 기능/아키텍처 3-5개 추출 | 불릿 리스트 |
+| `{works-with}` | SKILL.md 연동 스킬 목록 | GitHub 링크 포함 |
 
 ---
 
 ## README.md (English) 템플릿
 
 ```markdown
-# {title-en}
+# {skill-name}
 
 > 🇰🇷 [한국어 README](./README.ko.md)
 
-{desc-en}
+**{desc-en}**
 
-## What It Does
+## Prerequisites
 
-{features-en — bulleted list}
+- **Claude Cowork or Claude Code** environment
+{추가 요구사항이 있으면 항목 추가: Obsidian Vault, Web search 등}
 
-## Structure
+## Goal
 
-```
-{structure}
-```
+{goal-en — 2-3문장. 이 스킬이 해결하는 문제와 접근법}
 
-## Part Of
+## When & How to Use
 
-This skill is part of a Claude Cowork skill ecosystem. For more information on Claude Cowork skills, see [Anthropic's documentation](https://docs.claude.com).
+{when-how-en — 발동 조건, 사용 방법, 다른 스킬과의 차이점}
+
+## Use Cases
+
+| Scenario | Prompt | What Happens |
+|---|---|---|
+| {상황1} | `"{프롬프트1}"` | {동작 설명} |
+| {상황2} | `"{프롬프트2}"` | {동작 설명} |
+| {상황3} | `"{프롬프트3}"` | {동작 설명} |
+
+## Key Features
+
+{features — 불릿 리스트. 볼드 키워드 + 1줄 설명}
+
+## Works With
+
+- **[{연동스킬1}](https://github.com/jasonnamii/{연동스킬1})** — {관계 설명}
+- **[{연동스킬2}](https://github.com/jasonnamii/{연동스킬2})** — {관계 설명}
+
+## Installation
+
+\`\`\`bash
+git clone https://github.com/jasonnamii/{skill-name}.git ~/.claude/skills/{skill-name}
+\`\`\`
+
+## Update
+
+\`\`\`bash
+cd ~/.claude/skills/{skill-name} && git pull
+\`\`\`
+
+Skills placed in `~/.claude/skills/` are automatically available in Claude Code and Cowork sessions.
+
+## Part of Cowork Skills
+
+This is one of 25+ custom skills. See the full catalog: [github.com/jasonnamii/cowork-skills](https://github.com/jasonnamii/cowork-skills)
 
 ## License
 
-MIT
+MIT License — feel free to use, modify, and share.
 ```
 
 ---
@@ -51,29 +87,63 @@ MIT
 ## README.ko.md (한국어) 템플릿
 
 ```markdown
-# {title-ko}
+# {skill-name}
 
 > 🇺🇸 [English README](./README.md)
 
-{desc-ko}
+**{desc-ko}**
+
+## 사전 요구
+
+- **Claude Cowork 또는 Claude Code** 환경
+{추가 요구사항}
+
+## 목표
+
+{goal-ko — 2-3문장}
+
+## 사용 시점 & 방법
+
+{when-how-ko — 발동 조건, 사용 방법}
+
+## 사용 사례
+
+| 상황 | 프롬프트 | 동작 |
+|---|---|---|
+| {상황1} | `"{프롬프트1}"` | {동작 설명} |
+| {상황2} | `"{프롬프트2}"` | {동작 설명} |
+| {상황3} | `"{프롬프트3}"` | {동작 설명} |
 
 ## 주요 기능
 
-{features-ko — bulleted list}
+{features-ko — 불릿 리스트}
 
-## 구조
+## 연동 스킬
 
-```
-{structure}
-```
+- **[{연동스킬1}](https://github.com/jasonnamii/{연동스킬1})** — {관계 설명}
+- **[{연동스킬2}](https://github.com/jasonnamii/{연동스킬2})** — {관계 설명}
 
-## 소속
+## 설치
 
-이 스킬은 Claude Cowork 스킬 생태계의 일부입니다. Claude Cowork 스킬에 대한 자세한 정보는 [Anthropic 문서](https://docs.claude.com)를 참조하세요.
+\`\`\`bash
+git clone https://github.com/jasonnamii/{skill-name}.git ~/.claude/skills/{skill-name}
+\`\`\`
+
+## 업데이트
+
+\`\`\`bash
+cd ~/.claude/skills/{skill-name} && git pull
+\`\`\`
+
+`~/.claude/skills/`에 배치된 스킬은 Claude Code 및 Cowork 세션에서 자동으로 사용 가능합니다.
+
+## Cowork Skills
+
+25개 이상의 커스텀 스킬 중 하나입니다. 전체 카탈로그: [github.com/jasonnamii/cowork-skills](https://github.com/jasonnamii/cowork-skills)
 
 ## 라이선스
 
-MIT
+MIT License — 자유롭게 사용, 수정, 공유 가능합니다.
 ```
 
 ---
