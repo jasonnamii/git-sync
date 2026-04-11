@@ -106,9 +106,11 @@ rsync -av --delete \
   --exclude='__pycache__/' --exclude='*.pyc' \
   "{plugin_skills_path}/{skill-name}/" ./ && \
 
-# 민감정보 검사
-! grep -r -i -l 'oauth\|password=[^*]\|secret_key\|private_key\|Bearer ' \
-  --include="*.md" --include="*.py" --include="*.json" . && \
+# 민감정보 검사 (if-then 패턴: grep 매치=민감정보 발견=실패)
+if grep -r -i -l 'oauth\|password=[^*]\|secret_key\|private_key\|Bearer ' \
+  --include="*.md" --include="*.py" --include="*.json" . 2>/dev/null; then
+  echo "⚠️ 민감정보 발견 — STOP"; exit 1
+fi && \
 
 # commit + push
 git add -A && \
@@ -117,6 +119,8 @@ git diff --cached --quiet && echo "변경 없음 — 이미 최신" || \
 ```
 
 **에러 처리:** push 실패 → 1회 `git pull --rebase && git push` 재시도. 2회 실패 → STOP.
+
+**배치 (3개 이하):** 독립 스킬이면 for 루프로 호출 2를 1회에 묶을 수 있다. 4개+ → 순차.
 
 ### 리포트
 
@@ -156,9 +160,11 @@ ls UP_user-preferences_v*.md 2>/dev/null | grep -v "$CURRENT" | xargs rm -f
 ```bash
 cd "{repo_root}/user-preferences" && \
 
-# 민감정보
-! grep -r -i -l 'oauth\|password=[^*]\|secret_key\|private_key\|Bearer ' \
-  --include="*.md" . && \
+# 민감정보 검사 (if-then 패턴)
+if grep -r -i -l 'oauth\|password=[^*]\|secret_key\|private_key\|Bearer ' \
+  --include="*.md" . 2>/dev/null; then
+  echo "⚠️ 민감정보 발견 — STOP"; exit 1
+fi && \
 
 # commit + push
 git add -A && \
@@ -189,3 +195,4 @@ git diff --cached --quiet && echo "변경 없음" || \
 | UP 버전 파일명 변경 | glob `v*.md`로 탐색, 구버전 자동 정리 |
 | push 실패 뺑뺑이 | 1회 재시도 후 STOP. 자동 복구 루프 금지 |
 | ENV resolve 실패 | 추측 진행 금지. 실패 필드 보고 + STOP |
+| `! grep` 민감정보 검사 | `! grep`은 `&&` 체인에서 exit code 꼬임. **if-then 패턴** 사용: `if grep ...; then exit 1; fi` |
