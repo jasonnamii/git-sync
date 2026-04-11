@@ -125,8 +125,9 @@ cd "{repo_root}/{skill-name}" && \
 # rsync
 eval rsync -av --delete $EXCLUDES "{plugin_skills_path}/{skill-name}/" ./ && \
 
-# 민감정보 검사 → scripts/secret-scan.sh (패턴·제외·호환성 로직 일원화)
-bash scripts/secret-scan.sh . || exit 1 && \
+# 민감정보 검사 → 레포 내 scripts/ 우선, 없으면 git-sync 레포 폴백
+SCAN="scripts/secret-scan.sh"; [ -f "$SCAN" ] || SCAN="{repo_root}/git-sync/scripts/secret-scan.sh"
+bash "$SCAN" . || exit 1 && \
 
 # commit + push (push 실패 시 1회 재시도)
 git add -A && \
@@ -151,8 +152,9 @@ fi && \
 # rsync 실행
 eval rsync -av --delete $EXCLUDES "{plugin_skills_path}/{skill-name}/" ./ && \
 
-# 민감정보 검사 → scripts/secret-scan.sh
-bash scripts/secret-scan.sh . || exit 1 && \
+# 민감정보 검사 → 레포 내 scripts/ 우선, 없으면 git-sync 레포 폴백
+SCAN="scripts/secret-scan.sh"; [ -f "$SCAN" ] || SCAN="{repo_root}/git-sync/scripts/secret-scan.sh"
+bash "$SCAN" . || exit 1 && \
 
 # commit + push (push 실패 시 1회 재시도)
 git add -A && \
@@ -246,5 +248,5 @@ git diff --cached --quiet && echo "변경 없음" || \
 | UP 버전 파일명 변경 | glob `v*.md`로 탐색, 구버전 자동 정리 |
 | push 실패 뺑뺑이 | 1회 재시도 후 STOP. 자동 복구 루프 금지 |
 | ENV resolve 실패 | 추측 진행 금지. 실패 필드 보고 + STOP |
-| 민감정보 검사 | **스킬:** `bash scripts/secret-scan.sh .` (레포 내 스크립트). **UP:** `bash "{repo_root}/git-sync/scripts/secret-scan.sh" .` (git-sync 레포 참조). 인라인 grep 금지 — SKILL.md 자기참조 false positive + BSD/GNU grep 호환성 + exit code 꼬임 |
+| 민감정보 검사 | **스킬:** `bash scripts/secret-scan.sh .` (레포 내 스크립트). **레포에 scripts/ 없으면:** `bash "{repo_root}/git-sync/scripts/secret-scan.sh" .` (git-sync 레포 폴백). **UP:** 동일 폴백 경로. 인라인 grep 금지 — SKILL.md 자기참조 false positive + BSD/GNU grep 호환성 + exit code 꼬임 |
 | rsync exclude 중복 | `$EXCLUDES` 공통 변수 참조. 개별 블록에 직접 나열 금지 — 수정 시 불일치 발생 |
