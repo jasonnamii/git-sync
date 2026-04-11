@@ -112,14 +112,8 @@ rsync -av --delete \
   --exclude='__pycache__/' --exclude='*.pyc' \
   "{plugin_skills_path}/{skill-name}/" ./ && \
 
-# 민감정보 검사 (파이프 필터: SKILL.md 자체가 검사 패턴을 포함할 수 있으므로 제외)
-# ⚠ --exclude는 BSD/GNU grep 간 --include와의 우선순위가 달라 크로스플랫폼 불안정 → 파이프 필터 사용
-SENS_HITS=$(grep -r -i -l \
-  'oauth\|password=[^*]\|secret_key\|private_key\|Bearer \|api_key\|api_secret\|AKIA[0-9A-Z]\|ghp_[a-zA-Z0-9]\|sk-[a-zA-Z0-9]\|gho_\|glpat-\|xox[bpoas]-' \
-  --include="*.md" --include="*.py" --include="*.json" . 2>/dev/null | grep -v 'SKILL\.md') && \
-if [ -n "$SENS_HITS" ]; then
-  echo "$SENS_HITS"; echo "⚠️ 민감정보 발견 — STOP"; exit 1
-fi && \
+# 민감정보 검사 → scripts/secret-scan.sh (패턴·제외·호환성 로직 일원화)
+bash scripts/secret-scan.sh . || exit 1 && \
 
 # commit + push
 git add -A && \
@@ -152,13 +146,8 @@ rsync -av --delete \
   --exclude='__pycache__/' --exclude='*.pyc' \
   "{plugin_skills_path}/{skill-name}/" ./ && \
 
-# 민감정보 검사 (파이프 필터로 SKILL.md false positive 방지)
-SENS_HITS=$(grep -r -i -l \
-  'oauth\|password=[^*]\|secret_key\|private_key\|Bearer \|api_key\|api_secret\|AKIA[0-9A-Z]\|ghp_[a-zA-Z0-9]\|sk-[a-zA-Z0-9]\|gho_\|glpat-\|xox[bpoas]-' \
-  --include="*.md" --include="*.py" --include="*.json" . 2>/dev/null | grep -v 'SKILL\.md') && \
-if [ -n "$SENS_HITS" ]; then
-  echo "$SENS_HITS"; echo "⚠️ 민감정보 발견 — STOP"; exit 1
-fi && \
+# 민감정보 검사 → scripts/secret-scan.sh
+bash scripts/secret-scan.sh . || exit 1 && \
 
 # commit + push
 git add -A && \
@@ -208,9 +197,9 @@ ls UP_user-preferences_v*.md 2>/dev/null | grep -v "$CURRENT" | xargs rm -f
 ```bash
 cd "{repo_root}/user-preferences" && \
 
-# 민감정보 검사 (if-then 패턴)
-if grep -r -i -l \
-  'oauth\|password=[^*]\|secret_key\|private_key\|Bearer \|api_key\|api_secret\|AKIA[0-9A-Z]\|ghp_[a-zA-Z0-9]\|sk-[a-zA-Z0-9]\|gho_\|glpat-\|xox[bpoas]-' \
+# 민감정보 검사 (UP 레포는 SKILL.md 없어 false positive 없음 → 인라인 유지)
+if grep -r -i -E -l \
+  'oauth|password=[^*]|secret_key|private_key|Bearer |api_key|api_secret|AKIA[0-9A-Z]{16}|ghp_[a-zA-Z0-9]{36}|sk-[a-zA-Z0-9]{20}|gho_|glpat-|xox[bpoas]-' \
   --include="*.md" . 2>/dev/null; then
   echo "⚠️ 민감정보 발견 — STOP"; exit 1
 fi && \
@@ -244,5 +233,4 @@ git diff --cached --quiet && echo "변경 없음" || \
 | UP 버전 파일명 변경 | glob `v*.md`로 탐색, 구버전 자동 정리 |
 | push 실패 뺑뺑이 | 1회 재시도 후 STOP. 자동 복구 루프 금지 |
 | ENV resolve 실패 | 추측 진행 금지. 실패 필드 보고 + STOP |
-| `! grep` 민감정보 검사 | `! grep`은 `&&` 체인에서 exit code 꼬임. **if-then 패턴** 사용: `if grep ...; then exit 1; fi` |
-| 민감정보 검사 false positive | SKILL.md 자체에 grep 패턴 문자열이 포함된 스킬 → `\| grep -v 'SKILL\.md'` 파이프 필터로 제외. `--exclude`는 BSD/GNU grep 간 `--include`와 우선순위 불일치로 크로스플랫폼 불안정 |
+| 민감정보 검사 | 스킬 동기화: `bash scripts/secret-scan.sh .` 사용. 인라인 grep 금지 — SKILL.md 자기참조 false positive + BSD/GNU grep `--exclude`/`--include` 우선순위 불일치 + `&&` 체인 exit code 꼬임. UP 동기화: SKILL.md 없으므로 인라인 유지 가능 |
