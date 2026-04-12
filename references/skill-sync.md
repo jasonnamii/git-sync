@@ -26,13 +26,9 @@ SRC="{plugin_skills_path}/{skill-name}" && \
 [ -d "$SRC" ] || { echo "ERROR: 원본 없음"; exit 1; } && \
 [ -d "$REPO/.git" ] || { echo "NEW_REPO_NEEDED: $REPO"; exit 0; } && \
 
-# PRE_SYNC_CHECK: 삭제 예정 파일 확인 (eval 금지 — 공백 경로 안전)
-rsync -avn --delete \
-  --exclude='.git/' --exclude='.gitignore' \
-  --exclude='README.md' --exclude='README.ko.md' \
-  --exclude='LICENSE' --exclude='.DS_Store' \
-  --exclude='__pycache__/' --exclude='*.pyc' \
-  "$SRC/" "$REPO/" | grep '^deleting '
+# PRE_SYNC_CHECK: 삭제 예정 파일 확인
+EXCL="$REPO/scripts/rsync-exclude.txt"; [ -f "$EXCL" ] || EXCL="{repo_root}/git-sync/scripts/rsync-exclude.txt"
+rsync -avn --delete --exclude-from="$EXCL" "$SRC/" "$REPO/" | grep '^deleting '
 ```
 
 **판정:**
@@ -48,13 +44,9 @@ rsync -avn --delete \
 ```bash
 cd "{repo_root}/{skill-name}" && \
 
-# rsync (eval 금지 — 공백 경로 안전)
-rsync -av --delete \
-  --exclude='.git/' --exclude='.gitignore' \
-  --exclude='README.md' --exclude='README.ko.md' \
-  --exclude='LICENSE' --exclude='.DS_Store' \
-  --exclude='__pycache__/' --exclude='*.pyc' \
-  "{plugin_skills_path}/{skill-name}/" ./ && \
+# rsync
+EXCL="scripts/rsync-exclude.txt"; [ -f "$EXCL" ] || EXCL="{repo_root}/git-sync/scripts/rsync-exclude.txt"
+rsync -av --delete --exclude-from="$EXCL" "{plugin_skills_path}/{skill-name}/" ./ && \
 
 # 민감정보 검사 → 레포 내 scripts/ 우선, 없으면 git-sync 레포 폴백
 SCAN="scripts/secret-scan.sh"; [ -f "$SCAN" ] || SCAN="{repo_root}/git-sync/scripts/secret-scan.sh"
@@ -74,25 +66,16 @@ git diff --cached --quiet && echo "변경 없음 — 이미 최신" || \
 ```bash
 cd "{repo_root}/{skill-name}" && \
 
-# PRE_SYNC_CHECK 인라인 — 삭제 감지 시 자동 중단 (eval 금지 — 공백 경로 안전)
-DELETES=$(rsync -avn --delete \
-  --exclude='.git/' --exclude='.gitignore' \
-  --exclude='README.md' --exclude='README.ko.md' \
-  --exclude='LICENSE' --exclude='.DS_Store' \
-  --exclude='__pycache__/' --exclude='*.pyc' \
-  "{plugin_skills_path}/{skill-name}/" ./ | grep '^deleting ' || true) && \
+# PRE_SYNC_CHECK 인라인 — 삭제 감지 시 자동 중단
+EXCL="scripts/rsync-exclude.txt"; [ -f "$EXCL" ] || EXCL="{repo_root}/git-sync/scripts/rsync-exclude.txt"
+DELETES=$(rsync -avn --delete --exclude-from="$EXCL" "{plugin_skills_path}/{skill-name}/" ./ | grep '^deleting ' || true) && \
 
 if [ -n "$DELETES" ]; then
   echo "⚠️ 삭제 감지 — auto_mode에서도 중단:"; echo "$DELETES"; exit 1
 fi && \
 
-# rsync 실행 (eval 금지 — 공백 경로 안전)
-rsync -av --delete \
-  --exclude='.git/' --exclude='.gitignore' \
-  --exclude='README.md' --exclude='README.ko.md' \
-  --exclude='LICENSE' --exclude='.DS_Store' \
-  --exclude='__pycache__/' --exclude='*.pyc' \
-  "{plugin_skills_path}/{skill-name}/" ./ && \
+# rsync 실행
+rsync -av --delete --exclude-from="$EXCL" "{plugin_skills_path}/{skill-name}/" ./ && \
 
 # 민감정보 검사 → 레포 내 scripts/ 우선, 없으면 git-sync 레포 폴백
 SCAN="scripts/secret-scan.sh"; [ -f "$SCAN" ] || SCAN="{repo_root}/git-sync/scripts/secret-scan.sh"

@@ -19,12 +19,8 @@
 mkdir -p "{repo_root}/{skill-name}" && \
 cp "{repo_root}/trigger-dictionary/.gitignore" "{repo_root}/{skill-name}/" && \
 cp "{repo_root}/trigger-dictionary/LICENSE" "{repo_root}/{skill-name}/" && \
-rsync -av \
-  --exclude='.git/' --exclude='.gitignore' \
-  --exclude='README.md' --exclude='README.ko.md' \
-  --exclude='LICENSE' --exclude='.DS_Store' \
-  --exclude='__pycache__/' --exclude='*.pyc' \
-  "{plugin_skills_path}/{skill-name}/" "{repo_root}/{skill-name}/"
+EXCL="{repo_root}/git-sync/scripts/rsync-exclude.txt"
+rsync -av --exclude-from="$EXCL" "{plugin_skills_path}/{skill-name}/" "{repo_root}/{skill-name}/"
 ```
 
 ---

@@ -60,8 +60,8 @@ diff -q "{UP원본}/UP_stability.md" \
 ```bash
 # 1. 로컬 레포 구조 생성
 mkdir -p "{레포루트}/{new-skill}"
-rsync -av --exclude='.DS_Store' --exclude='__pycache__/' \
-  "{스킬원본}/{new-skill}/" "{레포루트}/{new-skill}/"
+EXCL="{레포루트}/git-sync/scripts/rsync-exclude.txt"
+rsync -av --exclude-from="$EXCL" "{스킬원본}/{new-skill}/" "{레포루트}/{new-skill}/"
 
 # 2. 메타 파일 복사
 cp "{레포루트}/trigger-dictionary/.gitignore" "{레포루트}/{new-skill}/"

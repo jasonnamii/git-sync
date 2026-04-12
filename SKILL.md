@@ -68,17 +68,14 @@ description: |
 
 ## 공통 rsync exclude
 
-모든 rsync 호출이 이 플래그 목록을 직접 사용한다. **단일 수정점(Single Point of Truth).**
+모든 rsync 호출이 `scripts/rsync-exclude.txt`를 사용한다. **단일 수정점(Single Point of Truth) — 패턴 추가·삭제는 이 파일 1곳만.**
 
-⚠ `plugin_skills_path`에 공백(`Application Support`)이 포함되어 있다. `eval` + 문자열 변수 조합은 공백 경로를 분리시키므로 **금지**. 반드시 개별 플래그를 직접 나열한다.
+⚠ `plugin_skills_path`에 공백(`Application Support`)이 포함되어 있다. `eval` + 문자열 변수 조합은 공백 경로를 분리시키므로 **금지**. `--exclude-from`은 파일 경로를 직접 받으므로 공백 안전.
 
 ```bash
-rsync [flags] \
-  --exclude='.git/' --exclude='.gitignore' \
-  --exclude='README.md' --exclude='README.ko.md' \
-  --exclude='LICENSE' --exclude='.DS_Store' \
-  --exclude='__pycache__/' --exclude='*.pyc' \
-  "$SRC/" "$DEST/"
+# EXCLUDE 파일 위치: 레포 내 scripts/ 우선, 없으면 git-sync 레포 폴백
+EXCL="scripts/rsync-exclude.txt"; [ -f "$EXCL" ] || EXCL="{repo_root}/git-sync/scripts/rsync-exclude.txt"
+rsync [flags] --exclude-from="$EXCL" "$SRC/" "$DEST/"
 ```
 
 ---
@@ -109,6 +106,6 @@ rsync [flags] \
 | push 실패 뺑뺑이 | 1회 재시도 후 STOP. 자동 복구 루프 금지 |
 | ENV resolve 실패 | 추측 진행 금지. 실패 필드 보고 + STOP |
 | 민감정보 검사 | 레포 내 `scripts/secret-scan.sh` 우선 → 없으면 `{repo_root}/git-sync/scripts/secret-scan.sh` 폴백. 인라인 grep 금지 |
-| rsync exclude 중복 | §공통 rsync exclude 플래그가 유일 원본. 스포크별 복사이므로 수정 시 전체 동기 필수 |
-| eval + $EXCLUDES | **금지**. 공백 경로 분리 위험. 개별 --exclude 플래그 직접 나열만 허용 |
+| rsync exclude 수정 | `scripts/rsync-exclude.txt`가 유일 원본. 패턴 추가·삭제는 이 파일 1곳만 |
+| eval + $EXCLUDES | **금지**. 공백 경로 분리 위험. `--exclude-from` 파일 참조만 허용 |
 | 새 레포 README 누락 | 절대규칙 #5 위반. `NEW_REPO_NEEDED` → new-repo-init.md → README 필수 생성 |
