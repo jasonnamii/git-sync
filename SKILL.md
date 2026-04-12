@@ -109,3 +109,4 @@ rsync [flags] --exclude-from="$EXCL" "$SRC/" "$DEST/"
 | rsync exclude 수정 | `scripts/rsync-exclude.txt`가 유일 원본. 패턴 추가·삭제는 이 파일 1곳만 |
 | eval + $EXCLUDES | **금지**. 공백 경로 분리 위험. `--exclude-from` 파일 참조만 허용 |
 | 새 레포 README 누락 | 절대규칙 #5 위반. `NEW_REPO_NEEDED` → new-repo-init.md → README 필수 생성 |
+| 변경 없는 스킬에 push 시도 | 배치 실행 전 `rsync -avn` diff 0건인 스킬은 push 대상에서 선제 제거. 불필요한 secret-scan·commit 시도 방지 |

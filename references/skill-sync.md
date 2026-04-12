@@ -92,6 +92,8 @@ git diff --cached --quiet && echo "변경 없음 — 이미 최신" || \
 
 **배치:** push-only 6개 이하 병렬. `gh api` 호출 포함 시 3개 이하. 7개+ 순차.
 
+**배치 프리체크:** 복수 스킬 동시 push 시, rsync dry-run(`rsync -avn`)으로 변경 없는 스킬을 선제 제거한 뒤 변경 있는 스킬만 push 대상으로 진행. 변경 없는 스킬에 불필요한 secret-scan·commit 시도 방지.
+
 ---
 
 ## 리포트
