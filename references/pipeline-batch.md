@@ -67,13 +67,18 @@ rsync -av --exclude='.DS_Store' --exclude='__pycache__/' \
 cp "{레포루트}/trigger-dictionary/.gitignore" "{레포루트}/{new-skill}/"
 cp "{레포루트}/trigger-dictionary/LICENSE" "{레포루트}/{new-skill}/"
 
-# 3. 이중언어 README 생성 → references/readme-templates.md 참조
-# README.md (English) + README.ko.md (한국어) 동시 생성
-# SKILL.md의 name, description, 본문에서 정보 추출 → 템플릿 적용
+# 3. 이중언어 README 생성 (필수 — README 없는 초기 커밋 금지)
+#    → references/readme-templates.md 템플릿 참조
+#    → SKILL.md의 name, description, 핵심 기능에서 정보 추출
+#    → DC write_file로 README.md (English) + README.ko.md (한국어) 생성
+#    ⚠ 이 단계를 건너뛰면 허브 SKILL.md의 NEW_REPO 플로우 위반
 
-# 4. git init + GitHub 레포 생성 + push
+# 4. 민감정보 검사 + git init + GitHub 레포 생성 + push
 cd "{레포루트}/{new-skill}"
+SCAN="scripts/secret-scan.sh"; [ -f "$SCAN" ] || SCAN="{레포루트}/git-sync/scripts/secret-scan.sh"
+bash "$SCAN" . || exit 1
 git init
+git checkout -b main
 git add -A
 git commit -m "Initial commit: {new-skill}"
 gh repo create "{GITHUB_USER}/{new-skill}" \
