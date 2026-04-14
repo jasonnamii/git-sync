@@ -33,7 +33,8 @@ rsync -avn --delete --exclude-from="$EXCL" "$SRC/" "$REPO/" | grep '^deleting '
 
 **판정:**
 - `NEW_REPO_NEEDED` 출력 → `references/new-repo-init.md`로 분기
-- 삭제 0건 → 호출 2 진행
+- 삭제 0건 + rsync diff 0건 → "변경 없음" 보고. ⚠ 세션에서 편집했는데 diff 0건이면 **.skill 미설치 가능성** → "`.skill 설치 먼저 해주세요`" 안내 + STOP
+- 삭제 0건 + diff 있음 → 호출 2 진행
 - references/scripts/agents 내 삭제 → **STOP + 형 확인**
 - 기타 삭제 → 삭제 목록 표시 + 형 확인 후 진행
 
@@ -72,6 +73,12 @@ DELETES=$(rsync -avn --delete --exclude-from="$EXCL" "{plugin_skills_path}/{skil
 
 if [ -n "$DELETES" ]; then
   echo "⚠️ 삭제 감지 — auto_mode에서도 중단:"; echo "$DELETES"; exit 1
+fi && \
+
+# diff 0건 체크 — .skill 미설치 감지
+CHANGES=$(rsync -avn --exclude-from="$EXCL" "{plugin_skills_path}/{skill-name}/" ./ 2>/dev/null | grep -c '^[^.]' || true) && \
+if [ "$CHANGES" -eq 0 ]; then
+  echo "⚠️ 변경 없음 — .skill 미설치 가능성. 설치 후 재시도"; exit 1
 fi && \
 
 # rsync 실행
