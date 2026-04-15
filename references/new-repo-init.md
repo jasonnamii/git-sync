@@ -19,7 +19,13 @@
 mkdir -p "{repo_root}/{skill-name}" && \
 cp "{repo_root}/trigger-dictionary/.gitignore" "{repo_root}/{skill-name}/" && \
 cp "{repo_root}/trigger-dictionary/LICENSE" "{repo_root}/{skill-name}/" && \
-EXCL="{repo_root}/git-sync/scripts/rsync-exclude.txt"
+
+# exclude 3단 폴백 (sync-skill.sh와 동일 로직)
+EXCL="{repo_root}/{skill-name}/scripts/rsync-exclude.txt"
+[ -f "$EXCL" ] || EXCL="{repo_root}/git-sync/scripts/rsync-exclude.txt"
+if [ ! -f "$EXCL" ]; then
+  EXCL=$(mktemp); printf '.git/\n.gitignore\nREADME.md\nREADME.ko.md\nLICENSE\n.DS_Store\n__pycache__/\n*.pyc\n' > "$EXCL"
+fi
 rsync -av --exclude-from="$EXCL" "{plugin_skills_path}/{skill-name}/" "{repo_root}/{skill-name}/"
 ```
 

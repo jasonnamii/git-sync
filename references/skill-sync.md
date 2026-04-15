@@ -1,119 +1,76 @@
 # 단일 스킬 동기화
 
-기존 레포가 있는 스킬의 rsync → commit → push 절차.
+기존 레포가 있는 스킬의 동기화. **sync-skill.sh 1회 호출로 완결.**
 
 ---
 
-## DC 호출 수
-
-| 조건 | DC 호출 | 설명 |
-|------|---------|------|
-| ENV 캐시 없음 (첫 호출) | 2회 | 호출 1: ENV + PRE_SYNC_CHECK → 호출 2: rsync + commit + push |
-| ENV 캐시 있음 + auto_mode=false | 2회 | 호출 1: PRE_SYNC_CHECK → 호출 2: rsync + commit + push |
-| ENV 캐시 있음 + auto_mode=true | **1회** | 통합: PRE_SYNC_CHECK + rsync + commit + push (삭제 감지 시 자동 중단) |
-
----
-
-## 호출 1: ENV + PRE_SYNC_CHECK
+## 실행
 
 ```bash
-# ENV resolve (캐시 있으면 이 부분 스킵)
-GITHUB_USER=$(gh api user --jq .login) && \
-REPO="{repo_root}/{skill-name}" && \
-SRC="{plugin_skills_path}/{skill-name}" && \
-
-# 원본·레포 존재 확인
-[ -d "$SRC" ] || { echo "ERROR: 원본 없음"; exit 1; } && \
-[ -d "$REPO/.git" ] || { echo "NEW_REPO_NEEDED: $REPO"; exit 0; } && \
-
-# PRE_SYNC_CHECK: 삭제 예정 파일 확인
-EXCL="$REPO/scripts/rsync-exclude.txt"
-[ -f "$EXCL" ] || EXCL="{repo_root}/git-sync/scripts/rsync-exclude.txt"
-if [ ! -f "$EXCL" ]; then echo "⚠️ exclude 부재 — 인라인 폴백" >&2; EXCL=$(mktemp); printf '.git/\n.gitignore\nREADME.md\nREADME.ko.md\nLICENSE\n.DS_Store\n__pycache__/\n*.pyc\n' > "$EXCL"; fi
-rsync -avn --delete --exclude-from="$EXCL" "$SRC/" "$REPO/" | grep '^deleting '
+# DC start_process로 실행 (Cowork 샌드박스 Bash 금지)
+bash "{repo_root}/git-sync/scripts/sync-skill.sh" \
+  "{skill-name}" \
+  "{plugin_skills_path}" \
+  "{repo_root}" \
+  "{github_user}" \
+  "Update {skill-name}: {변경요약}"
 ```
 
-**판정:**
-- `NEW_REPO_NEEDED` 출력 → `references/new-repo-init.md`로 분기
-- 삭제 0건 + rsync diff 0건 → "변경 없음" 보고. ⚠ 세션에서 편집했는데 diff 0건이면 **.skill 미설치 가능성** → "`.skill 설치 먼저 해주세요`" 안내 + STOP
-- 삭제 0건 + diff 있음 → 호출 2 진행
-- references/scripts/agents 내 삭제 → **STOP + 형 확인**
-- 기타 삭제 → 삭제 목록 표시 + 형 확인 후 진행
+**DC 호출 수:** ENV 캐시 유무 무관하게 **1회**. 스크립트가 PRE_SYNC_CHECK + rsync + secret-scan + commit + push를 모두 내장.
 
 ---
 
-## 호출 2: rsync + 민감정보 검사 + commit + push
+## 종료코드별 에이전트 행동
+
+| exit code | 의미 | 에이전트 행동 |
+|-----------|------|-------------|
+| 0 | 성공 | 스크립트 출력의 리포트를 형에게 전달 |
+| 1 | 에러 (원본 없음, 민감정보, push 2회 실패) | 에러 메시지 보고 + STOP |
+| 2 | 인자 오류 | 인자 확인 후 재시도 (1회만) |
+| 3 | 삭제 감지 | 삭제 목록을 형에게 표시 → 확인 후 수동 진행 or 중단 |
+| 4 | 변경 없음 | ".skill 설치 먼저 해주세요" 안내 + STOP |
+
+---
+
+## 스크립트 내장 로직 (에이전트가 재현할 필요 없음)
+
+1. **exclude 3단 폴백:** 레포 내 `scripts/rsync-exclude.txt` → `{repo_root}/git-sync/scripts/rsync-exclude.txt` → 인라인 하드코딩(tmpfile + 경고)
+2. **git-sync 레포 자동 clone:** 로컬에 없으면 `gh repo clone` 시도
+3. **PRE_SYNC_CHECK:** `rsync -avn --delete`로 삭제 예정 파일 감지 → exit 3
+4. **diff 0건 체크:** 변경 없으면 .skill 미설치 경고 → exit 4
+5. **secret-scan 2단 폴백:** 레포 내 → git-sync 레포
+6. **push 재시도:** 1회 `pull --rebase` 후 재시도. 2회 실패 → exit 1
+
+---
+
+## 삭제 감지 시 수동 진행
+
+exit 3 발생 시:
 
 ```bash
-cd "{repo_root}/{skill-name}" && \
-
-# rsync
-EXCL="scripts/rsync-exclude.txt"
-[ -f "$EXCL" ] || EXCL="{repo_root}/git-sync/scripts/rsync-exclude.txt"
-if [ ! -f "$EXCL" ]; then echo "⚠️ exclude 부재 — 인라인 폴백" >&2; EXCL=$(mktemp); printf '.git/\n.gitignore\nREADME.md\nREADME.ko.md\nLICENSE\n.DS_Store\n__pycache__/\n*.pyc\n' > "$EXCL"; fi
-rsync -av --delete --exclude-from="$EXCL" "{plugin_skills_path}/{skill-name}/" ./ && \
-
-# 민감정보 검사 → 레포 내 scripts/ 우선, 없으면 git-sync 레포 폴백
-SCAN="scripts/secret-scan.sh"; [ -f "$SCAN" ] || SCAN="{repo_root}/git-sync/scripts/secret-scan.sh"
-bash "$SCAN" . || exit 1 && \
-
-# commit + push (push 실패 시 1회 재시도)
-git add -A && \
-git diff --cached --quiet && echo "변경 없음 — 이미 최신" || \
-(git commit -m "Update {skill-name}: {변경요약}" && \
- git push || (git pull --rebase && git push) || { echo "❌ push 2회 실패 — STOP"; exit 1; })
+# 형이 확인 후 삭제 허용 — rsync --delete 직접 실행
+cd "{repo_root}/{skill-name}"
+EXCL="scripts/rsync-exclude.txt"; [ -f "$EXCL" ] || EXCL="{repo_root}/git-sync/scripts/rsync-exclude.txt"
+rsync -av --delete --exclude-from="$EXCL" "{plugin_skills_path}/{skill-name}/" ./
+git add -A && git commit -m "Update {skill-name}: {변경요약}" && git push
 ```
 
 ---
 
-## 통합 1회 호출 (ENV 캐시 + auto_mode=true)
+## 배치
 
-```bash
-cd "{repo_root}/{skill-name}" && \
+push-only 6개 이하: 병렬 OK. `gh api` 호출 포함 3개 이하. 7개+: 순차.
 
-# PRE_SYNC_CHECK 인라인 — 삭제 감지 시 자동 중단
-EXCL="scripts/rsync-exclude.txt"
-[ -f "$EXCL" ] || EXCL="{repo_root}/git-sync/scripts/rsync-exclude.txt"
-if [ ! -f "$EXCL" ]; then echo "⚠️ exclude 부재 — 인라인 폴백" >&2; EXCL=$(mktemp); printf '.git/\n.gitignore\nREADME.md\nREADME.ko.md\nLICENSE\n.DS_Store\n__pycache__/\n*.pyc\n' > "$EXCL"; fi
-DELETES=$(rsync -avn --delete --exclude-from="$EXCL" "{plugin_skills_path}/{skill-name}/" ./ | grep '^deleting ' || true) && \
-
-if [ -n "$DELETES" ]; then
-  echo "⚠️ 삭제 감지 — auto_mode에서도 중단:"; echo "$DELETES"; exit 1
-fi && \
-
-# diff 0건 체크 — .skill 미설치 감지
-CHANGES=$(rsync -avn --exclude-from="$EXCL" "{plugin_skills_path}/{skill-name}/" ./ 2>/dev/null | grep -c '^[^.]' || true) && \
-if [ "$CHANGES" -eq 0 ]; then
-  echo "⚠️ 변경 없음 — .skill 미설치 가능성. 설치 후 재시도"; exit 1
-fi && \
-
-# rsync 실행
-rsync -av --delete --exclude-from="$EXCL" "{plugin_skills_path}/{skill-name}/" ./ && \
-
-# 민감정보 검사 → 레포 내 scripts/ 우선, 없으면 git-sync 레포 폴백
-SCAN="scripts/secret-scan.sh"; [ -f "$SCAN" ] || SCAN="{repo_root}/git-sync/scripts/secret-scan.sh"
-bash "$SCAN" . || exit 1 && \
-
-# commit + push (push 실패 시 1회 재시도)
-git add -A && \
-git diff --cached --quiet && echo "변경 없음 — 이미 최신" || \
-(git commit -m "Update {skill-name}: {변경요약}" && \
- git push || (git pull --rebase && git push) || { echo "❌ push 2회 실패 — STOP"; exit 1; })
-```
-
-**에러 처리:** push 재시도 로직이 코드블록에 내장. 2회 실패 → STOP.
-
-**배치:** push-only 6개 이하 병렬. `gh api` 호출 포함 시 3개 이하. 7개+ 순차.
-
-**배치 프리체크:** 복수 스킬 동시 push 시, rsync dry-run(`rsync -avn`)으로 변경 없는 스킬을 선제 제거한 뒤 변경 있는 스킬만 push 대상으로 진행. 변경 없는 스킬에 불필요한 secret-scan·commit 시도 방지.
+**배치 프리체크:** 복수 스킬 동시 push 시, sync-skill.sh의 exit 4(변경 없음)로 자동 필터링. 별도 dry-run 불필요.
 
 ---
 
 ## 리포트
 
+스크립트가 자동 출력:
 ```
 ✅ {skill-name} 동기화 완료
-  변경: {N}파일 수정, {M}추가, {K}삭제
   커밋: {hash 7자리}
   URL: https://github.com/{github_user}/{skill-name}
+  {diff stat}
 ```

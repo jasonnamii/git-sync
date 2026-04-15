@@ -46,7 +46,7 @@ description: |
 ```bash
 [ -d "{repo_root}/git-sync/.git" ] || gh repo clone {github_user}/git-sync "{repo_root}/git-sync"
 ```
-이유: exclude 파일·secret-scan 폴백이 `{repo_root}/git-sync/scripts/`에 의존. **이 레포가 로컬에 없으면 exclude 무효화 → rsync diff 0건 → 동기화 실패(침묵).** 반드시 다른 스킬 동기화 전에 이 체크를 통과해야 한다.
+이유: `sync-skill.sh`와 `secret-scan.sh`가 이 레포에 있다. 로컬에 없으면 스크립트 실행 자체가 불가. sync-skill.sh 내부에도 자동 clone이 있지만, ENV resolve 시점에 선행 보장하는 것이 확실.
 
 **resolve 실패 시:** 해당 필드 보고 + STOP. 추측으로 진행 금지.
 
@@ -74,24 +74,35 @@ description: |
 
 ---
 
-## 공통 rsync exclude
+## 핵심 실행 — scripts/sync-skill.sh
 
-모든 rsync 호출이 `scripts/rsync-exclude.txt`를 사용한다. **단일 수정점(Single Point of Truth) — 패턴 추가·삭제는 이 파일 1곳만.**
-
-⚠ `plugin_skills_path`에 공백(`Application Support`)이 포함되어 있다. `eval` + 문자열 변수 조합은 공백 경로를 분리시키므로 **금지**. `--exclude-from`은 파일 경로를 직접 받으므로 공백 안전.
+**모든 스킬 동기화는 이 스크립트 1회 호출로 완결한다.** 에이전트가 rsync/exclude/secret-scan/commit/push를 직접 조립하지 않는다.
 
 ```bash
-# EXCLUDE 파일 위치: 레포 내 scripts/ 우선 → git-sync 레포 폴백 → 인라인 하드코딩 최종 폴백
-EXCL="scripts/rsync-exclude.txt"
-[ -f "$EXCL" ] || EXCL="{repo_root}/git-sync/scripts/rsync-exclude.txt"
-if [ ! -f "$EXCL" ]; then
-  echo "⚠️ exclude 파일 부재 — 인라인 폴백 사용" >&2
-  EXCL=$(mktemp) && printf '.git/\n.gitignore\nREADME.md\nREADME.ko.md\nLICENSE\n.DS_Store\n__pycache__/\n*.pyc\n' > "$EXCL"
-fi
-rsync [flags] --exclude-from="$EXCL" "$SRC/" "$DEST/"
+# DC start_process로 실행 (Cowork 샌드박스 Bash 금지)
+bash "{repo_root}/git-sync/scripts/sync-skill.sh" \
+  "{skill-name}" "{plugin_skills_path}" "{repo_root}" "{github_user}" "{커밋 메시지}"
 ```
 
-**3단 폴백 체인:** ① 대상 레포 내 `scripts/rsync-exclude.txt` → ② `{repo_root}/git-sync/scripts/rsync-exclude.txt` → ③ 인라인 하드코딩(tmpfile). ③까지 도달하면 경고 출력. **exclude 파일 없이 rsync 실행 = 절대 금지** — README/LICENSE 덮어쓰기 위험.
+**스크립트 내장 로직:**
+- exclude 3단 폴백 (레포 내 → git-sync 레포 → 인라인 하드코딩)
+- git-sync 레포 로컬 부재 시 자동 clone
+- 삭제 감지 시 자동 중단 (exit 3)
+- 변경 없음 감지 + .skill 미설치 경고 (exit 4)
+- secret-scan 2단 폴백
+- push 실패 1회 rebase 재시도
+
+**종료코드:** 0=성공, 1=에러, 2=인자 오류, 3=삭제 감지(확인 필요), 4=변경 없음
+
+**에이전트 행동:**
+- exit 0 → 리포트 출력
+- exit 3 → 삭제 목록 형에게 표시 + 확인 후 수동 진행
+- exit 4 → ".skill 설치 먼저 해주세요" 안내
+- exit 1/2 → 에러 보고 + STOP
+
+**exclude 패턴 수정:** `scripts/rsync-exclude.txt`가 유일 원본. 패턴 추가·삭제는 이 파일 1곳만.
+
+⚠ `plugin_skills_path`에 공백(`Application Support`)이 포함되어 있다. `eval` + 문자열 변수 조합 **금지**. sync-skill.sh 내부에서 인자를 따옴표로 보호하므로 안전.
 
 ---
 
@@ -120,10 +131,7 @@ rsync [flags] --exclude-from="$EXCL" "$SRC/" "$DEST/"
 | UP 버전 파일명 변경 | glob `v*.md`로 탐색, 구버전 자동 정리 |
 | push 실패 뺑뺑이 | 1회 재시도 후 STOP. 자동 복구 루프 금지 |
 | ENV resolve 실패 | 추측 진행 금지. 실패 필드 보고 + STOP |
-| 민감정보 검사 | 레포 내 `scripts/secret-scan.sh` 우선 → 없으면 `{repo_root}/git-sync/scripts/secret-scan.sh` 폴백. 인라인 grep 금지 |
-| rsync exclude 수정 | `scripts/rsync-exclude.txt`가 유일 원본. 패턴 추가·삭제는 이 파일 1곳만 |
-| eval + $EXCLUDES | **금지**. 공백 경로 분리 위험. `--exclude-from` 파일 참조만 허용 |
 | 새 레포 README 누락 | 절대규칙 #5 위반. `NEW_REPO_NEEDED` → new-repo-init.md → README 필수 생성 |
-| 변경 없는 스킬에 push 시도 | 배치 실행 전 `rsync -avn` diff 0건인 스킬은 push 대상에서 선제 제거. 불필요한 secret-scan·commit 시도 방지 |
-| **exclude 파일 부재로 diff 0건** | git-sync 레포가 로컬에 없으면 폴백 exclude 파일도 없음 → rsync가 exclude 없이 실행되어 diff 0건 반환 → 동기화 침묵 실패. **ENV resolve 직후 git-sync 레포 자동 clone 필수** + 인라인 폴백 3단 체인으로 방어 |
-| **git-sync 레포 로컬 미존재** | 다른 스킬 동기화 전에 `[ -d "{repo_root}/git-sync/.git" ]` 체크 → 없으면 자동 `gh repo clone`. 이 체크 없이 동기화 진행 금지 |
+| **에이전트가 rsync를 직접 조립** | **금지.** 반드시 `sync-skill.sh`를 호출. 에이전트가 인라인 --exclude로 우회하면 exclude 패턴 누락·불일치 발생. 스크립트가 3단 폴백·secret-scan·push 재시도를 모두 내장 |
+| **git-sync 레포 로컬 미존재** | ENV resolve 직후 자동 clone. sync-skill.sh 내부에도 이중 보장. 이 체크 없이 동기화 진행 금지 |
+| exclude 패턴 수정 | `scripts/rsync-exclude.txt`가 유일 원본. 패턴 추가·삭제는 이 파일 1곳만 |

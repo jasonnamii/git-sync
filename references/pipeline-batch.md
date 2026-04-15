@@ -45,11 +45,18 @@ diff -q "{UP원본}/UP_stability.md" \
 
 ### ③ 실행
 
-- 스킬 → 허브 SKILL.md의 「단일 스킬 동기화」 절차
-- UP → 허브 SKILL.md의 「UP 동기화」 절차
+- 스킬 → **`sync-skill.sh` 호출** (허브 SKILL.md §핵심 실행 참조)
+  ```bash
+  # 변경 감지된 각 스킬에 대해:
+  bash "{repo_root}/git-sync/scripts/sync-skill.sh" \
+    "{skill-name}" "{plugin_skills_path}" "{repo_root}" "{github_user}" \
+    "Update {skill-name}: {변경요약}"
+  ```
+- UP → 허브 SKILL.md의 「UP 동기화」 절차 (→ references/up-sync.md)
 - push-only 6개 이하: 병렬 OK (git protocol은 API rate limit 대상 아님)
 - `gh api` 호출 포함 3개 이하: 병렬 (REST API rate limit 방지)
 - 7개 이상: 순차 실행
+- **exit 4(변경 없음)로 자동 필터링 — 별도 dry-run 불필요**
 
 ---
 
