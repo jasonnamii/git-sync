@@ -44,9 +44,13 @@ description: |
 
 **git-sync 레포 자동 보장 (ENV resolve 직후, 필수):**
 ```bash
-[ -d "{repo_root}/git-sync/.git" ] || gh repo clone {github_user}/git-sync "{repo_root}/git-sync"
+if [ -d "{repo_root}/git-sync/.git" ]; then
+  cd "{repo_root}/git-sync" && git pull --ff-only 2>/dev/null || true
+else
+  gh repo clone {github_user}/git-sync "{repo_root}/git-sync"
+fi
 ```
-이유: `sync-skill.sh`와 `secret-scan.sh`가 이 레포에 있다. 로컬에 없으면 스크립트 실행 자체가 불가. sync-skill.sh 내부에도 자동 clone이 있지만, ENV resolve 시점에 선행 보장하는 것이 확실.
+이유: `sync-skill.sh`와 `secret-scan.sh`가 이 레포에 있다. **clone만으로는 부족** — 레포가 이미 있지만 구버전이면 새 스크립트가 없는 상태로 실행된다. `pull --ff-only`로 항상 최신 보장.
 
 **resolve 실패 시:** 해당 필드 보고 + STOP. 추측으로 진행 금지.
 

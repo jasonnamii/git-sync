@@ -42,8 +42,11 @@ if [ ! -d "$REPO/.git" ]; then
   exit 1
 fi
 
-# --- git-sync 레포 자동 보장 ---
-if [ ! -d "$GIT_SYNC_REPO/.git" ]; then
+# --- git-sync 레포 자동 보장 (clone or pull) ---
+if [ -d "$GIT_SYNC_REPO/.git" ]; then
+  # 이미 있으면 pull로 최신 보장 (구버전이면 sync-skill.sh 자체가 없을 수 있음)
+  (cd "$GIT_SYNC_REPO" && git pull --ff-only 2>/dev/null) || true
+else
   echo "INFO: git-sync 레포 로컬 부재 — 자동 clone"
   gh repo clone "$GITHUB_USER/git-sync" "$GIT_SYNC_REPO" 2>/dev/null || {
     echo "WARN: git-sync clone 실패 — 인라인 폴백 사용"
