@@ -27,7 +27,9 @@ SRC="{plugin_skills_path}/{skill-name}" && \
 [ -d "$REPO/.git" ] || { echo "NEW_REPO_NEEDED: $REPO"; exit 0; } && \
 
 # PRE_SYNC_CHECK: 삭제 예정 파일 확인
-EXCL="$REPO/scripts/rsync-exclude.txt"; [ -f "$EXCL" ] || EXCL="{repo_root}/git-sync/scripts/rsync-exclude.txt"
+EXCL="$REPO/scripts/rsync-exclude.txt"
+[ -f "$EXCL" ] || EXCL="{repo_root}/git-sync/scripts/rsync-exclude.txt"
+if [ ! -f "$EXCL" ]; then echo "⚠️ exclude 부재 — 인라인 폴백" >&2; EXCL=$(mktemp); printf '.git/\n.gitignore\nREADME.md\nREADME.ko.md\nLICENSE\n.DS_Store\n__pycache__/\n*.pyc\n' > "$EXCL"; fi
 rsync -avn --delete --exclude-from="$EXCL" "$SRC/" "$REPO/" | grep '^deleting '
 ```
 
@@ -46,7 +48,9 @@ rsync -avn --delete --exclude-from="$EXCL" "$SRC/" "$REPO/" | grep '^deleting '
 cd "{repo_root}/{skill-name}" && \
 
 # rsync
-EXCL="scripts/rsync-exclude.txt"; [ -f "$EXCL" ] || EXCL="{repo_root}/git-sync/scripts/rsync-exclude.txt"
+EXCL="scripts/rsync-exclude.txt"
+[ -f "$EXCL" ] || EXCL="{repo_root}/git-sync/scripts/rsync-exclude.txt"
+if [ ! -f "$EXCL" ]; then echo "⚠️ exclude 부재 — 인라인 폴백" >&2; EXCL=$(mktemp); printf '.git/\n.gitignore\nREADME.md\nREADME.ko.md\nLICENSE\n.DS_Store\n__pycache__/\n*.pyc\n' > "$EXCL"; fi
 rsync -av --delete --exclude-from="$EXCL" "{plugin_skills_path}/{skill-name}/" ./ && \
 
 # 민감정보 검사 → 레포 내 scripts/ 우선, 없으면 git-sync 레포 폴백
@@ -68,7 +72,9 @@ git diff --cached --quiet && echo "변경 없음 — 이미 최신" || \
 cd "{repo_root}/{skill-name}" && \
 
 # PRE_SYNC_CHECK 인라인 — 삭제 감지 시 자동 중단
-EXCL="scripts/rsync-exclude.txt"; [ -f "$EXCL" ] || EXCL="{repo_root}/git-sync/scripts/rsync-exclude.txt"
+EXCL="scripts/rsync-exclude.txt"
+[ -f "$EXCL" ] || EXCL="{repo_root}/git-sync/scripts/rsync-exclude.txt"
+if [ ! -f "$EXCL" ]; then echo "⚠️ exclude 부재 — 인라인 폴백" >&2; EXCL=$(mktemp); printf '.git/\n.gitignore\nREADME.md\nREADME.ko.md\nLICENSE\n.DS_Store\n__pycache__/\n*.pyc\n' > "$EXCL"; fi
 DELETES=$(rsync -avn --delete --exclude-from="$EXCL" "{plugin_skills_path}/{skill-name}/" ./ | grep '^deleting ' || true) && \
 
 if [ -n "$DELETES" ]; then

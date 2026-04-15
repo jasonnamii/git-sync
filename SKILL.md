@@ -42,6 +42,12 @@ description: |
 | `repo_root` | `$HOME/github-repos/skill-repos/` |
 | `auto_mode` | 기본 false. "앞으로 자동으로 해" → true (세션 내) |
 
+**git-sync 레포 자동 보장 (ENV resolve 직후, 필수):**
+```bash
+[ -d "{repo_root}/git-sync/.git" ] || gh repo clone {github_user}/git-sync "{repo_root}/git-sync"
+```
+이유: exclude 파일·secret-scan 폴백이 `{repo_root}/git-sync/scripts/`에 의존. **이 레포가 로컬에 없으면 exclude 무효화 → rsync diff 0건 → 동기화 실패(침묵).** 반드시 다른 스킬 동기화 전에 이 체크를 통과해야 한다.
+
 **resolve 실패 시:** 해당 필드 보고 + STOP. 추측으로 진행 금지.
 
 `plugin_skills_path` find 실패 시: Cowork 재설치로 UUID 변경 가능성 안내. `github_user` 실패 시: `gh auth status`로 인증 상태 확인 안내.
@@ -75,10 +81,17 @@ description: |
 ⚠ `plugin_skills_path`에 공백(`Application Support`)이 포함되어 있다. `eval` + 문자열 변수 조합은 공백 경로를 분리시키므로 **금지**. `--exclude-from`은 파일 경로를 직접 받으므로 공백 안전.
 
 ```bash
-# EXCLUDE 파일 위치: 레포 내 scripts/ 우선, 없으면 git-sync 레포 폴백
-EXCL="scripts/rsync-exclude.txt"; [ -f "$EXCL" ] || EXCL="{repo_root}/git-sync/scripts/rsync-exclude.txt"
+# EXCLUDE 파일 위치: 레포 내 scripts/ 우선 → git-sync 레포 폴백 → 인라인 하드코딩 최종 폴백
+EXCL="scripts/rsync-exclude.txt"
+[ -f "$EXCL" ] || EXCL="{repo_root}/git-sync/scripts/rsync-exclude.txt"
+if [ ! -f "$EXCL" ]; then
+  echo "⚠️ exclude 파일 부재 — 인라인 폴백 사용" >&2
+  EXCL=$(mktemp) && printf '.git/\n.gitignore\nREADME.md\nREADME.ko.md\nLICENSE\n.DS_Store\n__pycache__/\n*.pyc\n' > "$EXCL"
+fi
 rsync [flags] --exclude-from="$EXCL" "$SRC/" "$DEST/"
 ```
+
+**3단 폴백 체인:** ① 대상 레포 내 `scripts/rsync-exclude.txt` → ② `{repo_root}/git-sync/scripts/rsync-exclude.txt` → ③ 인라인 하드코딩(tmpfile). ③까지 도달하면 경고 출력. **exclude 파일 없이 rsync 실행 = 절대 금지** — README/LICENSE 덮어쓰기 위험.
 
 ---
 
@@ -112,3 +125,5 @@ rsync [flags] --exclude-from="$EXCL" "$SRC/" "$DEST/"
 | eval + $EXCLUDES | **금지**. 공백 경로 분리 위험. `--exclude-from` 파일 참조만 허용 |
 | 새 레포 README 누락 | 절대규칙 #5 위반. `NEW_REPO_NEEDED` → new-repo-init.md → README 필수 생성 |
 | 변경 없는 스킬에 push 시도 | 배치 실행 전 `rsync -avn` diff 0건인 스킬은 push 대상에서 선제 제거. 불필요한 secret-scan·commit 시도 방지 |
+| **exclude 파일 부재로 diff 0건** | git-sync 레포가 로컬에 없으면 폴백 exclude 파일도 없음 → rsync가 exclude 없이 실행되어 diff 0건 반환 → 동기화 침묵 실패. **ENV resolve 직후 git-sync 레포 자동 clone 필수** + 인라인 폴백 3단 체인으로 방어 |
+| **git-sync 레포 로컬 미존재** | 다른 스킬 동기화 전에 `[ -d "{repo_root}/git-sync/.git" ]` 체크 → 없으면 자동 `gh repo clone`. 이 체크 없이 동기화 진행 금지 |
