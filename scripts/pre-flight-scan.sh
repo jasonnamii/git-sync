@@ -1,20 +1,23 @@
 #!/usr/bin/env bash
-# pre-flight-scan.sh — 3-way 상태 수집 + 8셀 분류
-# Usage: pre-flight-scan.sh <plugin_skills_path> <repo_root> <github_user>
+# pre-flight-scan.sh — 3-way 상태 수집 + 8셀 분류 (v2: REMOTE TTL 캐시)
+# Usage: pre-flight-scan.sh <plugin_skills_path> <repo_root> <github_user> [--no-cache]
 # Output: TSV (name, origin, local, remote, cell, action) + 분류 요약
+#
+# 변경점 (v2):
+#   1. REMOTE 캐시 파일: {repo_root}/git-sync/.remote-cache (TTL 600s)
+#   2. --no-cache 플래그로 강제 재조회
+#   3. 캐시 히트시 gh repo list --limit 500 생략 (세션 끊김·재시작에도 유지)
 
 set -o pipefail
 
 PLUGIN_PATH="${1:?plugin_skills_path required}"
 REPO_ROOT="${2:?repo_root required}"
 GH_USER="${3:?github_user required}"
+NO_CACHE="${4:-}"
 
 [ -d "$PLUGIN_PATH" ] || { echo "❌ plugin_skills_path not found: $PLUGIN_PATH" >&2; exit 2; }
 [ -d "$REPO_ROOT" ] || { echo "❌ repo_root not found: $REPO_ROOT" >&2; exit 2; }
 
-# --- 제외 목록 (매트릭스 대상 아님)
-#  Built-in Claude 스킬: 원본 있어도 내 레포로 push 금지
-#  UP 레포: up-sync.md 전용 플로우 (별도 처리)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 EXCLUDE_FILE="$SCRIPT_DIR/excluded-names.txt"
 DEFAULT_EXCLUDES=(
@@ -24,12 +27,10 @@ DEFAULT_EXCLUDES=(
 )
 
 if [ -f "$EXCLUDE_FILE" ]; then
-  # bash 3.2 호환 (macOS 기본 bash) — mapfile 사용 금지
   EXCLUDES=()
   while IFS= read -r line; do
     [ -n "$line" ] && EXCLUDES+=("$line")
   done < <(grep -v '^#' "$EXCLUDE_FILE" | grep -v '^$')
-  # 파일은 있지만 전부 빈/주석 라인이라 배열이 비는 경우 폴백
   [ ${#EXCLUDES[@]} -eq 0 ] && EXCLUDES=("${DEFAULT_EXCLUDES[@]}")
 else
   EXCLUDES=("${DEFAULT_EXCLUDES[@]}")
@@ -43,20 +44,38 @@ is_excluded() {
   return 1
 }
 
-# --- 로그 디렉터리
+# --- 로그·캐시 디렉터리
 LOG_DIR="$REPO_ROOT/git-sync/logs"
 mkdir -p "$LOG_DIR" 2>/dev/null
 TS=$(date +%Y%m%d-%H%M%S)
 LOG_FILE="$LOG_DIR/preflight-$TS.log"
+CACHE_FILE="$REPO_ROOT/git-sync/.remote-cache"
+CACHE_TTL=600  # 10분
 
-# --- 1. REMOTE 스캔 (세션 1회, gh API)
-REMOTE_RAW=$(gh repo list "$GH_USER" --limit 500 --json name -q '.[].name' 2>/dev/null)
-REMOTE_STATUS=$?
-if [ $REMOTE_STATUS -ne 0 ]; then
-  REMOTE_UNKNOWN=1
-  echo "⚠  REMOTE 스캔 실패 — UNKNOWN 처리" >&2
-else
-  REMOTE_UNKNOWN=0
+# --- 1. REMOTE 스캔 (TTL 캐시)
+REMOTE_UNKNOWN=0
+CACHE_HIT=0
+
+if [ "$NO_CACHE" != "--no-cache" ] && [ -f "$CACHE_FILE" ]; then
+  # macOS/Linux stat 호환
+  CACHE_MTIME=$(stat -f %m "$CACHE_FILE" 2>/dev/null || stat -c %Y "$CACHE_FILE" 2>/dev/null || echo 0)
+  NOW=$(date +%s)
+  AGE=$((NOW - CACHE_MTIME))
+  if [ "$AGE" -lt "$CACHE_TTL" ]; then
+    REMOTE_RAW=$(cat "$CACHE_FILE")
+    CACHE_HIT=1
+    echo "ℹ  REMOTE 캐시 히트 (age=${AGE}s, TTL=${CACHE_TTL}s)" >&2
+  fi
+fi
+
+if [ "$CACHE_HIT" -eq 0 ]; then
+  REMOTE_RAW=$(gh repo list "$GH_USER" --limit 500 --json name -q '.[].name' 2>/dev/null)
+  if [ $? -ne 0 ]; then
+    REMOTE_UNKNOWN=1
+    echo "⚠  REMOTE 스캔 실패 — UNKNOWN 처리" >&2
+  else
+    echo "$REMOTE_RAW" > "$CACHE_FILE"
+  fi
 fi
 
 # --- 2. ORIGIN, LOCAL 스캔
@@ -68,7 +87,7 @@ LOCAL_RAW=$(ls -1 "$REPO_ROOT" 2>/dev/null | grep -v '^\.' | grep -v '^_archive'
   [ -d "$REPO_ROOT/$n/.git" ] && echo "$n"
 done)
 
-# --- 3. 합집합 생성 (제외 목록 필터링 포함)
+# --- 3. 합집합 + 제외 필터
 ALL_NAMES_RAW=$(printf "%s\n%s\n%s\n" "$ORIGIN_RAW" "$LOCAL_RAW" "$REMOTE_RAW" | sort -u | grep -v '^$')
 
 ALL_NAMES=""
@@ -86,7 +105,7 @@ done <<< "$ALL_NAMES_RAW"
 
 # --- 4. 3축 결합 + 셀 분류
 declare -a CELLS
-CELLS=(0 0 0 0 0 0 0 0 0)  # index 1~8, UNKNOWN=0
+CELLS=(0 0 0 0 0 0 0 0 0)
 
 HEADER=$'name\torigin\tlocal\tremote\tcell\taction'
 BODY=""
@@ -103,7 +122,6 @@ while IFS= read -r NAME; do
     R=$(echo "$REMOTE_RAW" | grep -Fx "$NAME" > /dev/null && echo 1 || echo 0)
   fi
 
-  # 셀 분류
   if [ "$R" = "?" ]; then
     CELL=0; ACTION="UNKNOWN"
   else
@@ -143,7 +161,8 @@ EXCLUDED_COUNT=$(echo "$EXCLUDED_NAMES" | grep -c '^.' || echo 0)
   echo "ℹ  Cell 7 (외부 레포):  ${CELLS[7]}개 — skip"
   echo "—  Cell 8 (없음):        ${CELLS[8]}개"
   echo "❓ UNKNOWN:              ${CELLS[0]}개"
-  echo "🚫 제외:                  ${EXCLUDED_COUNT}개 (built-in 스킬 + UP 레포)"
+  echo "🚫 제외:                  ${EXCLUDED_COUNT}개 (built-in + UP)"
+  echo "REMOTE 캐시:             $([ $CACHE_HIT -eq 1 ] && echo HIT || echo MISS)"
   echo ""
   echo "로그: $LOG_FILE"
 } >&2
@@ -154,6 +173,7 @@ EXCLUDED_COUNT=$(echo "$EXCLUDED_NAMES" | grep -c '^.' || echo 0)
   echo "# plugin_skills_path=$PLUGIN_PATH"
   echo "# repo_root=$REPO_ROOT"
   echo "# github_user=$GH_USER"
+  echo "# cache_hit=$CACHE_HIT"
   echo "# remote_scan=$([ $REMOTE_UNKNOWN -eq 1 ] && echo FAILED || echo OK)"
   echo "# excluded_count=$EXCLUDED_COUNT"
   echo ""
@@ -165,10 +185,6 @@ EXCLUDED_COUNT=$(echo "$EXCLUDED_NAMES" | grep -c '^.' || echo 0)
 } > "$LOG_FILE"
 
 # --- 8. 종료코드
-# 0 = 정상 (파괴적 액션 없음 or 필요한 것만 분류됨)
-# 5 = Cell 5 존재 (STOP 필요)
-# 6 = UNKNOWN 존재 (재스캔 필요)
-
 if [ ${CELLS[0]} -gt 0 ]; then exit 6; fi
 if [ ${CELLS[5]} -gt 0 ]; then exit 5; fi
 exit 0

@@ -1,8 +1,11 @@
 .git/
 .gitignore
+.remote-cache
 README.md
 README.ko.md
 LICENSE
 .DS_Store
 __pycache__/
 *.pyc
+logs/
+.git-sync-env
