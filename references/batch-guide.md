@@ -25,12 +25,17 @@ bash "{repo_root}/git-sync/scripts/pre-flight-scan.sh" \
 ## 2. 단일 스킬 동기화 (Cell 1·3)
 
 ```bash
+# v3 자동 모드 (DC 1회 완결 — ENV 자동 source)
+bash "{repo_root}/git-sync/scripts/sync-skill.sh" \
+  "{skill-name}" "Update {skill-name}: {변경요약}" --turbo
+
+# 레거시 5인자 모드 (호환)
 bash "{repo_root}/git-sync/scripts/sync-skill.sh" \
   "{skill-name}" "{plugin_skills_path}" "{repo_root}" "{github_user}" \
   "Update {skill-name}: {변경요약}"
 ```
 
-**스크립트 내장:** rsync 1회(itemize-changes로 diff·삭제 동시 판정) → secret-scan → commit → push(timeout 30s, 1회 rebase 재시도).
+**v3 변경:** ENV 자동 로딩(`.git-sync-env` 3단 폴백) → DC 호출 1회로 완결. `--turbo`시 dry-run 스킵(삭제 감지 불필요한 일반 업데이트에 사용). macOS timeout 폴백(perl) 내장.
 
 **Cell 3 (로컬 미클론) 선행 clone:**
 ```bash
@@ -146,6 +151,9 @@ ls UP_user-preferences_v*.md 2>/dev/null | grep -v "$CURRENT" | xargs rm -f
 cd "{repo_root}/user-preferences" && \
 bash "{repo_root}/git-sync/scripts/secret-scan.sh" . || exit 1 && \
 git add -A && \
+# macOS timeout 폴백 (coreutils timeout 없을 때)
+command -v timeout &>/dev/null || timeout() { perl -e 'alarm shift; exec @ARGV' "$@"; }
+
 (git diff --cached --quiet && echo "변경 없음") || \
 (git commit -m "Update UP: {버전}" && \
  (timeout 30 git push || (timeout 30 git pull --rebase && timeout 30 git push)) || \

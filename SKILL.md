@@ -45,24 +45,23 @@ vault_dependency: HARD
 
 ## Fast Path (단일 스킬)
 
-**조건:** 1개 스킬 명시 + `.remote-cache` 또는 `logs/preflight-*.log` 10분 이내 존재.
+**조건:** 1개 스킬 명시 + `.git-sync-env` 존재.
 
 ```
-① ENV 확인 (1회) → ② sync-skill.sh 호출 → ③ 리포트
+DC 1회 호출로 완결: sync-skill.sh가 ENV 자동 로딩 → rsync → push → 리포트
 ```
 
-**DC 호출: 최대 2회.** 캐시 미스 또는 10분 초과시 Full Pipeline으로 자동 폴백.
+**DC 호출: 1회.** ENV 미존재시 Full Pipeline으로 자동 폴백.
 
 ```bash
-# ① ENV + 캐시 확인
-source "{repo_root}/git-sync/.git-sync-env" 2>/dev/null || \
-  { echo "ENV 캐시 없음 — Full Pipeline 폴백"; exit 10; }
-
-# ② 단일 sync (rsync 단일 실행 + push timeout 내장)
+# DC 1회 — ENV 자동 source + sync + push 완결
 bash "{repo_root}/git-sync/scripts/sync-skill.sh" \
-  "{skill-name}" "$PLUGIN_SKILLS_PATH" "$REPO_ROOT" "$GITHUB_USER" \
-  "Update {skill-name}: {변경요약}"
+  "{skill-name}" "Update {skill-name}: {변경요약}" --turbo
 ```
+
+**--turbo:** dry-run 스킵 + `--delete` 없음. 일반 스킬 업데이트(파일 삭제 없는 경우)에 사용. 삭제 감지 필요시 `--turbo` 제거.
+
+**레거시 5인자 호환:** `sync-skill.sh <name> <plugin_path> <repo_root> <gh_user> <msg> [--turbo]` 도 동작.
 
 세부 → `references/batch-guide.md §1·2`.
 
@@ -148,7 +147,7 @@ export REPO_ROOT="$HOME/github-repos/skill-repos"
 | 스크립트 | 역할 | v2 개선 |
 |---|---|---|
 | `pre-flight-scan.sh` | 3-way 스캔 + 8셀 분류 | REMOTE TTL 캐시(10분) + `--no-cache` 플래그 |
-| `sync-skill.sh` | Cell 1·3 동기화 | **rsync 3회→1회** (itemize-changes) + push timeout 30s |
+| `sync-skill.sh` | Cell 1·3 동기화 | **v3: ENV 자동 로딩 + --turbo(dry-run 스킵)** + macOS perl 폴백. DC 1회 완결 |
 | `secret-scan.sh` | 민감정보 검사 | — |
 | `rsync-exclude.txt` | exclude 패턴 | `logs/` `.remote-cache` 추가 |
 | `excluded-names.txt` | Pre-Flight 제외 목록 | — |
@@ -179,3 +178,6 @@ export REPO_ROOT="$HOME/github-repos/skill-repos"
 | 로그·캐시가 rsync에 섞임 | `logs/`·`.remote-cache` exclude 필수(v2 기본) |
 | 에이전트가 rsync·git 직접 조립 | 금지. 스크립트 호출. 재조립 금지 |
 | skills-plugin UUID 변경 | `.git-sync-env`의 PLUGIN_SKILLS_PATH 갱신 → `disaster-recovery.md §G` |
+| macOS에 `timeout` 없음 | sync-skill.sh에 perl 기반 폴백 내장. `brew install coreutils`(gtimeout) 불요 |
+| DC 호출 2회+ 느림 | v3 자동 모드 사용 — `sync-skill.sh <name> <msg> --turbo`로 DC 1회 완결 |
+| 매번 dry-run 느림 | `--turbo` 사용 시 dry-run 스킵. 파일 삭제 없는 일반 업데이트에 적합 |
