@@ -8,6 +8,7 @@ description: |
   P4: skill-builder 패키징 완료 후, up-manager 수정 완료 후, 스킬 수정 완료 후.
   P5: git push 결과로, 동기화 리포트로.
   NOT: GitHub Pages 배포(→github-deploy), 스킬수정 자체(→skill-builder), git 일반작업(→직접수행).
+vault_dependency: HARD
 ---
 
 # Git Sync
