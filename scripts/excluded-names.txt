@@ -1,0 +1,19 @@
+# Pre-Flight Scan 제외 목록
+# 이 목록에 있는 name은 매트릭스 분류 대상에서 제외됨.
+# 빈 줄과 # 주석 줄은 무시.
+#
+# 제외 범주:
+#   1. Built-in Claude 스킬 — Claude Code/Cowork가 기본 제공. 내 레포로 push 금지.
+#   2. UP 레포 — up-sync.md 전용 플로우로 별도 처리.
+
+# Built-in Claude 스킬
+docx
+pdf
+pptx
+xlsx
+schedule
+consolidate-memory
+setup-cowork
+
+# UP 레포 (별도 플로우)
+user-preferences
