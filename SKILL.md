@@ -24,7 +24,7 @@ vault_dependency: HARD
 | 1 | **DC start_process로만 실행** — Cowork 샌드박스 Bash 금지 | 샌드박스는 로컬 git repo 접근 불가 |
 | 2 | **원본→레포 단방향** — 역방향 금지 | 원본은 skills-plugin 관리 |
 | 3 | **README/LICENSE/.gitignore 보호** — rsync exclude 필수 | 레포 전용 메타파일 |
-| 4 | **파괴적 액션 게이트** — `gh repo create`·`rsync --delete`·로컬 `rm -rf`는 명시 컨펌. `gh repo delete`·`git push --force`는 절대 금지(복구 §F 예외) | 중복·유실 방지 |
+| 4 | **파괴적 액션 게이트** — `gh repo create`·`rsync --delete`·로컬 `rm -rf`는 명시 컨펌. `gh repo delete`·`git push --force`(bare)는 절대 금지(복구 §F 예외). **`git push --force-with-lease`는 허용** — race-safe, 로컬이 원격보다 앞서고 원격 변경 이미 로컬에 반영된 경우(rename·rebase 직후) 컨펌 없이 실행 | 중복·유실 방지 + 과잉 방어 차단 |
 | 5 | **새 레포 = README 2종 필수** — 초기 커밋에 README.md + README.ko.md | 매번 수동 생성 방지 |
 | 6 | **Pre-Flight Scan 필수** — 배치 진입 전 3-way 상태 수집 완료 전 어떤 액션도 금지. 단일 스킬은 Fast Path 허용 | 2026-04-16 사고(3축 독립 수집 미비) 재발 방지 |
 | 7 | **매트릭스 외 분기 금지** — `state-matrix.md` 8셀 + UNKNOWN만 신뢰. 기억 재구성·추측 분기=FAIL | 상태 공간 완전 열거 |
@@ -181,3 +181,5 @@ export REPO_ROOT="$HOME/github-repos/skill-repos"
 | macOS에 `timeout` 없음 | sync-skill.sh에 perl 기반 폴백 내장. `brew install coreutils`(gtimeout) 불요 |
 | DC 호출 2회+ 느림 | v3 자동 모드 사용 — `sync-skill.sh <name> <msg> --turbo`로 DC 1회 완결 |
 | 매번 dry-run 느림 | `--turbo` 사용 시 dry-run 스킵. 파일 삭제 없는 일반 업데이트에 적합 |
+| force-with-lease 과잉 방어 | race-safe(원격 변경 감지 시 자동 거부). rename·rebase 후 diverge 시 컨펌 없이 실행. `--force`(bare)만 금지 |
+| rename 후 diverge 컨펌 요청 | 원격 변경이 이미 로컬에 반영됐다면(SKILL.md 재작성 등) force-with-lease 즉시 실행. 질문 루프 금지 |
