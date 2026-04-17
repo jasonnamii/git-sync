@@ -148,7 +148,8 @@ export REPO_ROOT="$HOME/github-repos/skill-repos"
 |---|---|---|
 | `pre-flight-scan.sh` | 3-way 스캔 + 8셀 분류 | REMOTE TTL 캐시(10분) + `--no-cache` 플래그 |
 | `sync-skill.sh` | Cell 1·3 동기화 | **v3: ENV 자동 로딩 + --turbo(dry-run 스킵)** + macOS perl 폴백. DC 1회 완결 |
-| `secret-scan.sh` | 민감정보 검사 | — |
+| `secret-scan.sh` | 민감정보 검사 | **v2: allowlist 지원** — `secret-scan-allowlist.txt`의 정규식으로 false positive 라인 허용 |
+| `secret-scan-allowlist.txt` | FP 허용 목록 | 라인 단위 정규식. 주석(#)·빈 줄 무시. 신규 FP 시 이 파일에 추가 |
 | `rsync-exclude.txt` | exclude 패턴 | `logs/` `.remote-cache` 추가 |
 | `excluded-names.txt` | Pre-Flight 제외 목록 | — |
 
@@ -183,3 +184,4 @@ export REPO_ROOT="$HOME/github-repos/skill-repos"
 | 매번 dry-run 느림 | `--turbo` 사용 시 dry-run 스킵. 파일 삭제 없는 일반 업데이트에 적합 |
 | force-with-lease 과잉 방어 | race-safe(원격 변경 감지 시 자동 거부). rename·rebase 후 diverge 시 컨펌 없이 실행. `--force`(bare)만 금지 |
 | rename 후 diverge 컨펌 요청 | 원격 변경이 이미 로컬에 반영됐다면(SKILL.md 재작성 등) force-with-lease 즉시 실행. 질문 루프 금지 |
+| secret-scan false positive (api_key 언급·메타 패턴 리스트 등) | `scripts/secret-scan-allowlist.txt` 에 해당 라인 정규식 추가. 코드 수정·bypass 금지. 허용 건수는 스캔 결과에 표시됨 |
