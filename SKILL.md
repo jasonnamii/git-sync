@@ -94,6 +94,8 @@ export REPO_ROOT="$HOME/github-repos/skill-repos"
 
 **resolve 우선순위:** 1) `.git-sync-env` 파일 → 2) 명령어로 1회 resolve 후 파일 작성 → 3) 실패시 STOP + 형에게 확인.
 
+**v5 자동 복구 (stale 감지):** sync-skill.sh 실행 시 `$PLUGIN_SKILLS_PATH/$SKILL_NAME` 부재 감지 → skills-plugin root(`$HOME/.../skills-plugin`) 하위 `*/*/skills` 재스캔 → SKILL_NAME 포함 & mtime 최신 경로로 `.git-sync-env` 자동 갱신(백업 `.bak.<epoch>` 생성 후 sed). Cowork 재설치·UUID 변경에도 자동 복구.
+
 | 필드 | 확인 명령 (파일 없을 때만) |
 |------|-------------------|
 | `GITHUB_USER` | `gh api user --jq .login` |
@@ -151,7 +153,7 @@ export REPO_ROOT="$HOME/github-repos/skill-repos"
 | 스크립트 | 역할 | v2 개선 |
 |---|---|---|
 | `pre-flight-scan.sh` | 3-way 스캔 + 8셀 분류 | REMOTE TTL 캐시(10분) + `--no-cache` 플래그 |
-| `sync-skill.sh` | Cell 1·3 동기화 | **v4: 기본 turbo(dry-run 스킵·--delete 없음) + --strict 옵션** + ENV 자동 로딩 + macOS perl 폴백. DC 1회 완결 |
+| `sync-skill.sh` | Cell 1·3 동기화 | **v5: PLUGIN_SKILLS_PATH stale 자동 감지·복구** + v4 기본 turbo + --strict 옵션 + ENV 자동 로딩 + macOS perl 폴백. DC 1회 완결 |
 | `secret-scan.sh` | 민감정보 검사 | **v2: allowlist 지원** — `secret-scan-allowlist.txt`의 정규식으로 false positive 라인 허용 |
 | `secret-scan-allowlist.txt` | FP 허용 목록 | 라인 단위 정규식. 주석(#)·빈 줄 무시. 신규 FP 시 이 파일에 추가 |
 | `rsync-exclude.txt` | exclude 패턴 | `logs/` `.remote-cache` 추가 |
@@ -182,7 +184,7 @@ export REPO_ROOT="$HOME/github-repos/skill-repos"
 | REMOTE UNKNOWN을 '없음'으로 해석 | 금지. 재스캔 또는 UNKNOWN 유지 |
 | 로그·캐시가 rsync에 섞임 | `logs/`·`.remote-cache` exclude 필수(v2 기본) |
 | 에이전트가 rsync·git 직접 조립 | 금지. 스크립트 호출. 재조립 금지 |
-| skills-plugin UUID 변경 | `.git-sync-env`의 PLUGIN_SKILLS_PATH 갱신 → `disaster-recovery.md §G` |
+| skills-plugin UUID 변경 | v5부터 **자동 감지·갱신**. SKILL_NAME 부재 시 skills-plugin root 재스캔 후 mtime 최신 경로로 ENV 자동 치환(백업 생성). 수동 수정 불요 |
 | macOS에 `timeout` 없음 | sync-skill.sh에 perl 기반 폴백 내장. `brew install coreutils`(gtimeout) 불요 |
 | DC 호출 2회+ 느림 | v4 기본 turbo 모드로 DC 1회 완결. 옵션 없이 `sync-skill.sh <name> <msg>` |
 | 매번 dry-run 느림 | v4부터 기본이 dry-run 스킵. `--strict` 지정 시에만 dry-run + --delete. 삭제 감지 필요할 때만 |

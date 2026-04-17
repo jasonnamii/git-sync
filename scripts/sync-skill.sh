@@ -1,9 +1,14 @@
 #!/usr/bin/env bash
-# sync-skill.sh v4 — 스킬 단일 동기화. DC 1회 호출 완결.
+# sync-skill.sh v5 — 스킬 단일 동기화. DC 1회 호출 완결.
 #
 # 사용법:
 #   bash sync-skill.sh <skill-name> [commit_msg] [--strict]
 #   bash sync-skill.sh <skill-name> <plugin_skills_path> <repo_root> <github_user> <commit_msg> [--strict]
+#
+# v5 추가: PLUGIN_SKILLS_PATH stale 자동 감지·복구
+#   - skills-plugin UUID 변경 시 ENV 자동 갱신 (수동 편집 불필요)
+#   - 탐색: skills-plugin root 하위 */*/skills 중 SKILL_NAME 포함 & mtime 최신
+#   - .git-sync-env 백업(.bak.<epoch>) 후 sed 치환
 #
 # v4 설계 원칙 (BREAKING: 기본값 반전):
 #   1. **기본 = turbo** — dry-run 스킵 + --delete 없음. 일반 업데이트 2배 빠름
@@ -64,6 +69,46 @@ elif [ $# -ge 1 ]; then
 
   source "$ENV_FILE"
   : "${PLUGIN_SKILLS_PATH:?}" "${REPO_ROOT:?}" "${GITHUB_USER:?}"
+
+  # --- v5: PLUGIN_SKILLS_PATH stale 자동 감지·복구 ---
+  # SKILL_NAME 디렉토리가 없으면 skills-plugin root 재스캔 → mtime 최신 경로로 갱신
+  if [ ! -d "$PLUGIN_SKILLS_PATH/$SKILL_NAME" ]; then
+    echo "⚠ PLUGIN_SKILLS_PATH stale — '$SKILL_NAME' 없음. skills-plugin 재스캔..." >&2
+    _skp_root="$HOME/Library/Application Support/Claude/local-agent-mode-sessions/skills-plugin"
+    if [ -d "$_skp_root" ]; then
+      _best_path=""
+      _best_mtime=0
+      while IFS= read -r _p; do
+        [ -z "$_p" ] && continue
+        [ -d "$_p/$SKILL_NAME" ] || continue
+        if _m=$(stat -f %m "$_p/$SKILL_NAME" 2>/dev/null); then :
+        elif _m=$(stat -c %Y "$_p/$SKILL_NAME" 2>/dev/null); then :
+        else _m=""; fi
+        [ -z "$_m" ] && continue
+        if [ "$_m" -gt "$_best_mtime" ]; then
+          _best_mtime="$_m"
+          _best_path="$_p"
+        fi
+      done < <(find "$_skp_root" -maxdepth 3 -name "skills" -type d 2>/dev/null)
+
+      if [ -n "$_best_path" ]; then
+        cp "$ENV_FILE" "$ENV_FILE.bak.$(date +%s)"
+        if sed --version >/dev/null 2>&1; then
+          sed -i "s|^export PLUGIN_SKILLS_PATH=.*|export PLUGIN_SKILLS_PATH=\"$_best_path\"|" "$ENV_FILE"
+        else
+          sed -i '' "s|^export PLUGIN_SKILLS_PATH=.*|export PLUGIN_SKILLS_PATH=\"$_best_path\"|" "$ENV_FILE"
+        fi
+        PLUGIN_SKILLS_PATH="$_best_path"
+        echo "✓ ENV 자동 갱신: PLUGIN_SKILLS_PATH → $_best_path (백업: $ENV_FILE.bak.*)" >&2
+      else
+        echo "❌ 자동 탐색 실패 — '$SKILL_NAME' 있는 skills 경로 없음" >&2
+        exit 1
+      fi
+    else
+      echo "❌ skills-plugin root 없음: $_skp_root" >&2
+      exit 1
+    fi
+  fi
 else
   echo "ERROR: sync-skill.sh <skill-name> [commit_msg] [--strict]"
   echo "       sync-skill.sh <skill-name> <plugin_skills_path> <repo_root> <github_user> <commit_msg> [--strict]"
