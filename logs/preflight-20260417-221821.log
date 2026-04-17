@@ -1,0 +1,71 @@
+# Pre-Flight Scan — 20260417-221821
+# plugin_skills_path=/Users/jason/Library/Application Support/Claude/local-agent-mode-sessions/skills-plugin/93e1bd57-2a9b-4d0f-9d81-b3fbb63364af/0abbf68b-6218-43fa-ba5c-ce522b65d1a7/skills
+# repo_root=/Users/jason/github-repos/skill-repos
+# github_user=jasonnamii
+# cache_hit=0
+# remote_scan=OK
+# excluded_count=8
+
+# Excluded names:
+#   consolidate-memory
+#   docx
+#   pdf
+#   pptx
+#   schedule
+#   setup-cowork
+#   user-preferences
+#   xlsx
+
+name	origin	local	remote	cell	action
+app-architect	1	1	1	1	sync
+apple-design-style	0	1	1	5	ORIGIN_LOST_STOP
+autoloop	1	1	1	1	sync
+biz-skill	1	1	1	1	sync
+bp-guide	1	1	1	1	sync
+ceo-pipeline	1	1	1	1	sync
+claude-hooks	0	1	1	5	ORIGIN_LOST_STOP
+copywriting-engine	1	1	1	1	sync
+design-skill	1	1	1	1	sync
+dunamu-yanolja-proposal	0	0	1	7	external_skip
+fact-checker	1	1	1	1	sync
+financial-model	1	1	1	1	sync
+git-sync	1	1	1	1	sync
+github-deploy	1	1	1	1	sync
+hail-mary-hit-analysis	0	0	1	7	external_skip
+hit-skill	1	1	1	1	sync
+holdings-consulting	1	1	1	1	sync
+html-div-style	1	1	1	1	sync
+human-skill	1	1	1	1	sync
+jasonnamii.github.io	0	0	1	7	external_skip
+kisas-ip-scenario	0	0	1	7	external_skip
+kisas-platform-vision	0	0	1	7	external_skip
+kisas-tf-agenda	0	0	1	7	external_skip
+management-skill	1	1	1	1	sync
+mbmg-meeting-questions	0	0	1	7	external_skip
+meeting-engine	1	1	1	1	sync
+meta-skill	0	1	0	6	ORPHAN_LOCAL_CONFIRM
+metric-tracker	1	1	1	1	sync
+multilingual-translator	1	1	1	1	sync
+negotiation-skill	1	1	1	1	sync
+obsidian-markdown	1	1	1	1	sync
+paper-engine	1	1	1	1	sync
+person-profiler	1	1	1	1	sync
+planning-skill	1	1	1	1	sync
+policy-planning	1	1	1	1	sync
+project-guideline-initializer	0	1	1	5	ORIGIN_LOST_STOP
+project-update	0	1	0	6	ORPHAN_LOCAL_CONFIRM
+project-updater	1	1	1	1	sync
+research-frame	1	1	1	1	sync
+risk-radar	1	1	1	1	sync
+ruby-skill	1	1	1	1	sync
+session-briefing	1	1	1	1	sync
+skill-builder	1	1	1	1	sync
+skill-doctor	1	1	1	1	sync
+startup-investment	1	1	1	1	sync
+tech-human-resource-market-research	0	0	1	7	external_skip
+three-party-strategy	0	0	1	7	external_skip
+trigger-dictionary	1	1	1	1	sync
+triz	1	1	1	1	sync
+ui-action-designer	1	1	1	1	sync
+up-manager	1	1	1	1	sync
+ux-advisor	1	1	1	1	sync
