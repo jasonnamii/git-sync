@@ -1,17 +1,19 @@
 #!/usr/bin/env bash
-# sync-skill.sh v3 — 스킬 단일 동기화. DC 1회 호출 완결.
+# sync-skill.sh v4 — 스킬 단일 동기화. DC 1회 호출 완결.
 #
 # 사용법:
-#   bash sync-skill.sh <skill-name> [commit_msg] [--turbo]
-#   bash sync-skill.sh <skill-name> <plugin_skills_path> <repo_root> <github_user> <commit_msg> [--turbo]
+#   bash sync-skill.sh <skill-name> [commit_msg] [--strict]
+#   bash sync-skill.sh <skill-name> <plugin_skills_path> <repo_root> <github_user> <commit_msg> [--strict]
 #
-# v3 설계 원칙:
-#   1. ENV 자동 resolve — .git-sync-env 자동 source. 인자 5개 모드도 호환 유지
-#   2. --turbo 모드 — dry-run 스킵 + --delete 없음 (삭제 불필요시 2배 빠름)
-#   3. macOS 네이티브 — timeout 폴백(perl), stat 호환
-#   4. DC 1회 호출 완결 — ENV resolve를 별도 DC 호출 불필요
+# v4 설계 원칙 (BREAKING: 기본값 반전):
+#   1. **기본 = turbo** — dry-run 스킵 + --delete 없음. 일반 업데이트 2배 빠름
+#   2. --strict 옵션 — 삭제 감지 필요시에만 dry-run + --delete 수행
+#   3. --turbo 플래그는 no-op(하위호환) — 이제 기본이므로 무시
+#   4. ENV 자동 resolve — .git-sync-env 자동 source. 인자 5개 모드도 호환 유지
+#   5. macOS 네이티브 — timeout 폴백(perl), stat 호환
+#   6. DC 1회 호출 완결 — ENV resolve를 별도 DC 호출 불필요
 #
-# 종료코드: 0=성공, 1=에러, 2=인자 오류, 3=삭제 감지(확인 필요), 4=변경 없음
+# 종료코드: 0=성공, 1=에러, 2=인자 오류, 3=삭제 감지(--strict), 4=변경 없음(--strict)
 
 set -euo pipefail
 
@@ -20,13 +22,14 @@ if ! command -v timeout &>/dev/null; then
   timeout() { local secs="$1"; shift; perl -e 'alarm shift; exec @ARGV' "$secs" "$@"; }
 fi
 
-# --- 플래그 파싱 ---
-TURBO=0
+# --- 플래그 파싱 (기본 turbo, --strict 지정 시 엄격 모드) ---
+TURBO=1
 ARGS=()
 for arg in "$@"; do
   case "$arg" in
-    --turbo) TURBO=1 ;;
-    *) ARGS+=("$arg") ;;
+    --strict) TURBO=0 ;;
+    --turbo)  TURBO=1 ;;   # 하위호환 no-op
+    *)        ARGS+=("$arg") ;;
   esac
 done
 set -- "${ARGS[@]}"
@@ -62,8 +65,8 @@ elif [ $# -ge 1 ]; then
   source "$ENV_FILE"
   : "${PLUGIN_SKILLS_PATH:?}" "${REPO_ROOT:?}" "${GITHUB_USER:?}"
 else
-  echo "ERROR: sync-skill.sh <skill-name> [commit_msg] [--turbo]"
-  echo "       sync-skill.sh <skill-name> <plugin_skills_path> <repo_root> <github_user> <commit_msg> [--turbo]"
+  echo "ERROR: sync-skill.sh <skill-name> [commit_msg] [--strict]"
+  echo "       sync-skill.sh <skill-name> <plugin_skills_path> <repo_root> <github_user> <commit_msg> [--strict]"
   exit 2
 fi
 

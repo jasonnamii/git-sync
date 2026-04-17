@@ -54,14 +54,18 @@ DC 1회 호출로 완결: sync-skill.sh가 ENV 자동 로딩 → rsync → push 
 **DC 호출: 1회.** ENV 미존재시 Full Pipeline으로 자동 폴백.
 
 ```bash
-# DC 1회 — ENV 자동 source + sync + push 완결
+# DC 1회 — ENV 자동 source + sync + push 완결 (기본 = turbo)
 bash "{repo_root}/git-sync/scripts/sync-skill.sh" \
-  "{skill-name}" "Update {skill-name}: {변경요약}" --turbo
+  "{skill-name}" "Update {skill-name}: {변경요약}"
 ```
 
-**--turbo:** dry-run 스킵 + `--delete` 없음. 일반 스킬 업데이트(파일 삭제 없는 경우)에 사용. 삭제 감지 필요시 `--turbo` 제거.
+**기본 = turbo (v4~):** dry-run 스킵 + `--delete` 없음. 일반 업데이트 2배 빠름. 옵션 없이 기본 호출이 최속경로.
 
-**레거시 5인자 호환:** `sync-skill.sh <name> <plugin_path> <repo_root> <gh_user> <msg> [--turbo]` 도 동작.
+**`--strict`:** 파일 삭제가 포함된 업데이트일 때만 지정. dry-run으로 삭제 감지 후 실제 `--delete` 수행. 지정 안 하면 기본(turbo) 모드에서 레포에 고아 파일이 남을 수 있음.
+
+**`--turbo`:** 하위호환 no-op. v4부터 기본이라 지정 불필요.
+
+**레거시 5인자 호환:** `sync-skill.sh <name> <plugin_path> <repo_root> <gh_user> <msg> [--strict]` 도 동작.
 
 세부 → `references/batch-guide.md §1·2`.
 
@@ -147,7 +151,7 @@ export REPO_ROOT="$HOME/github-repos/skill-repos"
 | 스크립트 | 역할 | v2 개선 |
 |---|---|---|
 | `pre-flight-scan.sh` | 3-way 스캔 + 8셀 분류 | REMOTE TTL 캐시(10분) + `--no-cache` 플래그 |
-| `sync-skill.sh` | Cell 1·3 동기화 | **v3: ENV 자동 로딩 + --turbo(dry-run 스킵)** + macOS perl 폴백. DC 1회 완결 |
+| `sync-skill.sh` | Cell 1·3 동기화 | **v4: 기본 turbo(dry-run 스킵·--delete 없음) + --strict 옵션** + ENV 자동 로딩 + macOS perl 폴백. DC 1회 완결 |
 | `secret-scan.sh` | 민감정보 검사 | **v2: allowlist 지원** — `secret-scan-allowlist.txt`의 정규식으로 false positive 라인 허용 |
 | `secret-scan-allowlist.txt` | FP 허용 목록 | 라인 단위 정규식. 주석(#)·빈 줄 무시. 신규 FP 시 이 파일에 추가 |
 | `rsync-exclude.txt` | exclude 패턴 | `logs/` `.remote-cache` 추가 |
@@ -180,8 +184,9 @@ export REPO_ROOT="$HOME/github-repos/skill-repos"
 | 에이전트가 rsync·git 직접 조립 | 금지. 스크립트 호출. 재조립 금지 |
 | skills-plugin UUID 변경 | `.git-sync-env`의 PLUGIN_SKILLS_PATH 갱신 → `disaster-recovery.md §G` |
 | macOS에 `timeout` 없음 | sync-skill.sh에 perl 기반 폴백 내장. `brew install coreutils`(gtimeout) 불요 |
-| DC 호출 2회+ 느림 | v3 자동 모드 사용 — `sync-skill.sh <name> <msg> --turbo`로 DC 1회 완결 |
-| 매번 dry-run 느림 | `--turbo` 사용 시 dry-run 스킵. 파일 삭제 없는 일반 업데이트에 적합 |
+| DC 호출 2회+ 느림 | v4 기본 turbo 모드로 DC 1회 완결. 옵션 없이 `sync-skill.sh <name> <msg>` |
+| 매번 dry-run 느림 | v4부터 기본이 dry-run 스킵. `--strict` 지정 시에만 dry-run + --delete. 삭제 감지 필요할 때만 |
+| 파일 삭제했는데 레포에 남음 | 기본 turbo 모드는 --delete 없음. 삭제 포함 업데이트는 `--strict` 지정 필수 |
 | force-with-lease 과잉 방어 | race-safe(원격 변경 감지 시 자동 거부). rename·rebase 후 diverge 시 컨펌 없이 실행. `--force`(bare)만 금지 |
 | rename 후 diverge 컨펌 요청 | 원격 변경이 이미 로컬에 반영됐다면(SKILL.md 재작성 등) force-with-lease 즉시 실행. 질문 루프 금지 |
 | secret-scan false positive (api_key 언급·메타 패턴 리스트 등) | `scripts/secret-scan-allowlist.txt` 에 해당 라인 정규식 추가. 코드 수정·bypass 금지. 허용 건수는 스캔 결과에 표시됨 |
