@@ -1,7 +1,7 @@
 ---
 name: git-sync
 description: |
-  스킬·설정 GitHub 레포 생명주기 엔진. 3-way 상태 매트릭스(8셀) + Fast Path 결정적 분기. 단일은 캐시로 2단계 push, 배치는 Pre-Flight 후 비파괴→파괴적 순. 개별 레포({GITHUB_USER}/{skill-name}).
+  스킬·설정 GitHub 레포 생명주기 엔진. 이중 매트릭스(파일 3-way 8셀 + Git 상태 6셀) 결정적 분기. 단일은 캐시로 2단계 push, 배치는 Pre-Flight 후 비파괴→파괴적 순. 개별 레포({GITHUB_USER}/{skill-name}).
   P1: 깃동기화, 깃싱크, 깃푸시, 레포동기화, 깃허브동기화, 스킬동기화, 스킬업로드, 레포생성, 새레포, git sync.
   P2: 동기화해줘, 푸시해줘, 올려줘, sync, push, upload.
   P3: git sync, repo sync, github push, skill deployment, new repo.
@@ -13,7 +13,9 @@ vault_dependency: HARD
 
 # Git Sync
 
-스킬·UP → GitHub 레포 생명주기 관리. **3-way 상태 매트릭스(8셀)** 결정적 분기 + **Fast Path** 캐시 활용.
+스킬·UP → GitHub 레포 생명주기 관리. **이중 매트릭스 순차 게이트**(파일 3-way 8셀 + Git 상태 6셀) + **Fast Path** 캐시 활용.
+
+**v6 (2026-04-18):** Git 상태 매트릭스(G1~G6) 추가. sync-skill.sh를 3-Phase 상태머신으로 재구성(scan → dispatch → execute). v5의 silent failure / auto-rebase detached HEAD / rebase 중단 감지 누락을 매트릭스 단계에서 전차단.
 
 ---
 
@@ -27,7 +29,8 @@ vault_dependency: HARD
 | 4 | **파괴적 액션 게이트** — `gh repo create`·`rsync --delete`·로컬 `rm -rf`는 명시 컨펌. `gh repo delete`·`git push --force`(bare)는 절대 금지(복구 §F 예외). **`git push --force-with-lease`는 허용** — race-safe, 로컬이 원격보다 앞서고 원격 변경 이미 로컬에 반영된 경우(rename·rebase 직후) 컨펌 없이 실행 | 중복·유실 방지 + 과잉 방어 차단 |
 | 5 | **새 레포 = README 2종 필수** — 초기 커밋에 README.md + README.ko.md | 매번 수동 생성 방지 |
 | 6 | **Pre-Flight Scan 필수** — 배치 진입 전 3-way 상태 수집 완료 전 어떤 액션도 금지. 단일 스킬은 Fast Path 허용 | 2026-04-16 사고(3축 독립 수집 미비) 재발 방지 |
-| 7 | **매트릭스 외 분기 금지** — `state-matrix.md` 8셀 + UNKNOWN만 신뢰. 기억 재구성·추측 분기=FAIL | 상태 공간 완전 열거 |
+| 7 | **매트릭스 외 분기 금지** — `state-matrix.md` 8셀 + `git-state-matrix.md` 6셀 + UNKNOWN만 신뢰. 기억 재구성·추측 분기=FAIL | 상태 공간 완전 열거 |
+| 8 | **이중 매트릭스 순차 게이트** — 파일 매트릭스(O·L·R) Cell 1·3 통과 → Git 매트릭스(HEAD·Rebase·Ahead·Behind) G1·G2 통과만 실행 진입. 한 축이라도 실패 = STOP | 파일은 정상이어도 로컬 git 상태가 비정상이면 push 파괴 |
 
 ---
 
@@ -117,7 +120,9 @@ export REPO_ROOT="$HOME/github-repos/skill-repos"
 
 ---
 
-## 상태 매트릭스 — 8셀 요약
+## 상태 매트릭스 — 파일 3-way (8셀)
+
+파일 존재 축. **O**rigin · **L**ocal · **R**emote 3-way.
 
 | # | O | L | R | 의미 | 액션 | 컨펌 |
 |---|:-:|:-:|:-:|---|---|:-:|
@@ -135,6 +140,26 @@ export REPO_ROOT="$HOME/github-repos/skill-repos"
 
 ---
 
+## 상태 매트릭스 — Git 상태 (6셀)
+
+브랜치·커밋 축. **HEAD**·**Rebase**·**Ahead**·**Behind** 4축 스냅샷.
+
+| 셀 | HEAD | Rebase | Ahead | Behind | 액션 | 종료코드 |
+|----|------|--------|:-:|:-:|---|:-:|
+| G1 | on-branch | ✗ | 0 | 0 | **clean sync** — rsync→add→(staged)commit→push→POST_CHECK | 0 |
+| G2 | on-branch | ✗ | N | 0 | **push-only** — 미푸시 커밋 함께 상승 (v5 silent failure 차단) | 0 |
+| G3 | on-branch | ✗ | N | M | **DIVERGED — STOP** — 자동 rebase 금지, 사용자 컨펌 | 5 |
+| G4 | on-branch | ✗ | 0 | M | **BEHIND — STOP** — fast-forward pull 필요 | 5 |
+| G5 | * | ✓ | * | * | **REBASE 중단 — STOP** — `git rebase --abort` 안내 | 6 |
+| G6 | detached | ✗ | * | * | **DETACHED — STOP** — 수동 복구 안내 | 7 |
+| ? | UNKNOWN | | | | 스캔 실패 — 재시도 | 8 |
+
+**POST_CHECK:** G1·G2 실행 후 `git rev-list --count origin/$BRANCH..HEAD == 0` 확인. 미일치시 exit 8.
+
+세부 → `git-state-matrix.md`. **이중 게이트 원칙:** 파일 매트릭스(Cell 1·3) **AND** Git 매트릭스(G1·G2) 모두 통과만 실행.
+
+---
+
 ## 배치 처리 순서
 
 1. **Cell 1·3 비파괴:** push-only 6개 이하 병렬 / `gh api` 포함 3개 이하 / 7개+ 순차
@@ -148,22 +173,23 @@ export REPO_ROOT="$HOME/github-repos/skill-repos"
 
 ---
 
-## Scripts (v2 최적화)
+## Scripts
 
-| 스크립트 | 역할 | v2 개선 |
+| 스크립트 | 역할 | 최신 개선 |
 |---|---|---|
-| `pre-flight-scan.sh` | 3-way 스캔 + 8셀 분류 | REMOTE TTL 캐시(10분) + `--no-cache` 플래그 |
-| `sync-skill.sh` | Cell 1·3 동기화 | **v5: PLUGIN_SKILLS_PATH stale 자동 감지·복구** + v4 기본 turbo + --strict 옵션 + ENV 자동 로딩 + macOS perl 폴백. DC 1회 완결 |
-| `secret-scan.sh` | 민감정보 검사 | **v2: allowlist 지원** — `secret-scan-allowlist.txt`의 정규식으로 false positive 라인 허용 |
-| `secret-scan-allowlist.txt` | FP 허용 목록 | 라인 단위 정규식. 주석(#)·빈 줄 무시. 신규 FP 시 이 파일에 추가 |
-| `rsync-exclude.txt` | exclude 패턴 | `logs/` `.remote-cache` 추가 |
+| `pre-flight-scan.sh` | 파일 3-way 스캔 + 8셀 분류 | REMOTE TTL 캐시(10분) + `--no-cache` 플래그 |
+| `sync-skill.sh` | Cell 1·3 동기화 | **v6 (2026-04-18): 3-Phase 상태머신** — Phase 1 `git_state_scan()` 5축 스냅샷 → Phase 2 `dispatch_matrix()` 6셀 분기 → Phase 3 `execute_cell()` G1·G2만 실행 + POST_CHECK. v5 silent failure / auto-rebase detached HEAD / rebase 중단 감지 누락 3대 결함 전차단. v5 stale 경로 자동 복구·turbo 기본·macOS perl 폴백 승계 |
+| `secret-scan.sh` | 민감정보 검사 | v2: allowlist 지원 — `secret-scan-allowlist.txt` 정규식 FP 허용 |
+| `secret-scan-allowlist.txt` | FP 허용 목록 | 라인 단위 정규식. 주석(#)·빈 줄 무시 |
+| `rsync-exclude.txt` | exclude 패턴 | `logs/` `.remote-cache` 포함 |
 | `excluded-names.txt` | Pre-Flight 제외 목록 | — |
 
 ---
 
 ## References
 
-- `state-matrix.md` — 8셀 결정 테이블 + 셀별 세부 액션
+- `state-matrix.md` — 파일 3-way 8셀 결정 테이블 + 셀별 세부 액션
+- `git-state-matrix.md` — **v6** Git 상태 6셀 매트릭스 (HEAD·Rebase·Ahead·Behind) + POST_CHECK
 - `batch-guide.md` — Pre-Flight·단일·배치·UP·신규 레포 통합 프로토콜
 - `readme-templates.md` — 이중언어 README 템플릿
 - `disaster-recovery.md` — Cell 2·5·6 복구 + 사고 롤백
@@ -178,7 +204,6 @@ export REPO_ROOT="$HOME/github-repos/skill-repos"
 | 단일 스킬에 Full Pipeline 강제 | Fast Path 존재. 캐시 10분 이내면 Pre-Flight 스킵 |
 | sync-skill.sh rsync 여러번 | v2부터 itemize-changes 단일. 3회 동작 시 스크립트 업데이트 누락 |
 | `gh repo list --limit 500` 매번 | `.remote-cache` TTL 600초. `--no-cache`로만 강제 |
-| push 멈춤·뺑뺑이 | timeout 30s 내장. rebase 블록 시 exit 1 |
 | ENV resolve 반복 | `.git-sync-env` 영속화. 세션 유실에도 유지 |
 | auto_mode=true에서 Cell 2·4·5·6 자동 | 금지. auto_mode는 Cell 1·3만 |
 | REMOTE UNKNOWN을 '없음'으로 해석 | 금지. 재스캔 또는 UNKNOWN 유지 |
@@ -192,3 +217,20 @@ export REPO_ROOT="$HOME/github-repos/skill-repos"
 | force-with-lease 과잉 방어 | race-safe(원격 변경 감지 시 자동 거부). rename·rebase 후 diverge 시 컨펌 없이 실행. `--force`(bare)만 금지 |
 | rename 후 diverge 컨펌 요청 | 원격 변경이 이미 로컬에 반영됐다면(SKILL.md 재작성 등) force-with-lease 즉시 실행. 질문 루프 금지 |
 | secret-scan false positive (api_key 언급·메타 패턴 리스트 등) | `scripts/secret-scan-allowlist.txt` 에 해당 라인 정규식 추가. 코드 수정·bypass 금지. 허용 건수는 스캔 결과에 표시됨 |
+| push 성공했다는데 원격에 반영 안 됨 | **v6 POST_CHECK 필수.** `origin/$BRANCH..HEAD == 0` 검증 후에만 성공 처리. 네트워크·branch protection·race로 push RC=0여도 반영 안 될 수 있음 |
+| 로컬 미푸시 커밋 있는데 "변경 없음" 종료 | v5 silent failure. v6에서 **G2 셀**로 강제 push — rsync diff 유무와 무관하게 로컬이 원격보다 앞서면 push 실행 |
+| push rejected 받고 auto rebase | 금지. **v6에서 G3 셀 = STOP + 사용자 컨펌.** v5의 `git pull --rebase` 자동 실행은 timeout 시 detached HEAD 잔존 위험 → 제거 |
+| 이전 세션의 rebase 중단 상태로 rsync | working tree 오염. **v6에서 G5 셀 = Phase 1에서 선차단.** `.git/rebase-{merge,apply}/` 감지 시 exit 6 + abort 안내 |
+| detached HEAD에서 commit | 고아 커밋 생성. **v6에서 G6 셀 = 자동 복구 금지, 수동 판단 강제.** `git symbolic-ref HEAD` 실패 시 exit 7 |
+| fetch 없이 Ahead/Behind 측정 | origin/$BRANCH가 stale → G1~G4 오분류. **v6 Phase 1에서 `git fetch origin` 1회 필수** (timeout 15s) |
+
+---
+
+## Version
+
+| 버전 | 날짜 | 변경 |
+|------|------|------|
+| v6 | 2026-04-18 | **Git 상태 매트릭스 6셀 신설** (G1~G6 + UNKNOWN). `sync-skill.sh` 3-Phase 상태머신 재구성(scan→dispatch→execute). POST_CHECK 추가. v5 silent failure / auto-rebase detached HEAD / rebase 중단 감지 누락 3대 결함 전차단. `references/git-state-matrix.md` 추가. 이중 매트릭스 순차 게이트 원칙(절대규칙 8) 추가. |
+| v5 | — | PLUGIN_SKILLS_PATH stale 자동 감지·복구 |
+| v4 | — | 기본 turbo 모드 (dry-run·--delete 스킵) |
+| v2 | — | pre-flight TTL 캐시, secret-scan allowlist, itemize-changes 단일 |
