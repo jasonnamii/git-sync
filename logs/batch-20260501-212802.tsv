@@ -1,0 +1,12 @@
+name	rc	status	tail
+session-briefing	0	OK	total size is 10597  speedup is 64.22|✅ 민감정보 없음|변경 없음 — 이미 최신 (G1, 미푸시 커밋도 없음)|
+skill-builder	0	OK	   evals/cases.json                | 24 ++++++++++++++++++++++++| references/post-doctor-notes.md | 31 +++++++++++++++++++++++++++++++| 2 files changed, 55 insertions(+)|
+skill-doctor	0	OK	total size is 94422  speedup is 118.62|✅ 민감정보 없음|변경 없음 — 이미 최신 (G1, 미푸시 커밋도 없음)|
+startup-investment	0	OK	total size is 520072  speedup is 474.52|✅ 민감정보 없음|변경 없음 — 이미 최신 (G1, 미푸시 커밋도 없음)|
+trigger-skill	0	OK	total size is 52433  speedup is 17.87|✅ 민감정보 없음|변경 없음 — 이미 최신 (G1, 미푸시 커밋도 없음)|
+triz	0	OK	total size is 14952  speedup is 54.57|✅ 민감정보 없음|변경 없음 — 이미 최신 (G1, 미푸시 커밋도 없음)|
+ui-action-designer	0	OK	  URL: https://github.com/jasonnamii/ui-action-designer|   SKILL.md | 58 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++| 1 file changed, 58 insertions(+)|
+up-doctor	0	OK	total size is 35181  speedup is 78.18|✅ 민감정보 없음|변경 없음 — 이미 최신 (G1, 미푸시 커밋도 없음)|
+up-manager	0	OK	total size is 76751  speedup is 72.96|✅ 민감정보 없음|변경 없음 — 이미 최신 (G1, 미푸시 커밋도 없음)|
+ux-advisor	0	OK	total size is 129026  speedup is 199.73|✅ 민감정보 없음|변경 없음 — 이미 최신 (G1, 미푸시 커밋도 없음)|
+vault-mount	0	OK	total size is 16085  speedup is 39.72|✅ 민감정보 없음|변경 없음 — 이미 최신 (G1, 미푸시 커밋도 없음)|

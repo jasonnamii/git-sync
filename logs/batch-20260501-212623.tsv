@@ -16,3 +16,28 @@ delegate-llm	0	OK	⚠️ 민감정보 발견 — STOP|  False positive? → /Use
 design-skill	0	OK	total size is 250947  speedup is 86.06|✅ 민감정보 없음|변경 없음 — 이미 최신 (G1, 미푸시 커밋도 없음)|
 fact-checker	0	OK	total size is 31691  speedup is 63.26|✅ 민감정보 없음|변경 없음 — 이미 최신 (G1, 미푸시 커밋도 없음)|
 financial-model	0	OK	   references/post-doctor-notes.md | 31 ++++++++++++++++++++++++++++++| scripts/validate.py             | 42 +++++++++++++++++++++++++++++++++++++++++| 2 files changed, 73 insertions(+)|
+git-sync	0	OK	 logs/preflight-20260501-212551.log | 99 ++++++++++++++++++++++++++++++++++++++| scripts/secret-scan-allowlist.txt  |  4 ++| 6 files changed, 268 insertions(+), 31 deletions(-)|
+github-deploy	0	OK	 scripts/deploy.sh         | 0| scripts/migrate-legacy.sh | 0| 3 files changed, 0 insertions(+), 0 deletions(-)|
+gpt-talk-distiller	0	OK	total size is 23762  speedup is 70.30|✅ 민감정보 없음|변경 없음 — 이미 최신 (G1, 미푸시 커밋도 없음)|
+hit-skill	0	OK	   CHANGELOG.md                    | 10 ++++++++++| references/post-doctor-notes.md | 31 +++++++++++++++++++++++++++++++| 2 files changed, 41 insertions(+)|
+holdings-consulting	0	OK	 references/post-doctor-notes.md |  31 ++++++++++++| scripts/validate.py             |  42 ++++++++++++++++| 4 files changed, 122 insertions(+), 83 deletions(-)|
+html-div-style	0	OK	total size is 49748  speedup is 89.64|✅ 민감정보 없음|변경 없음 — 이미 최신 (G1, 미푸시 커밋도 없음)|
+human-skill	0	OK	total size is 197662  speedup is 170.10|✅ 민감정보 없음|변경 없음 — 이미 최신 (G1, 미푸시 커밋도 없음)|
+management-skill	0	OK	  URL: https://github.com/jasonnamii/management-skill|   SKILL.md | 58 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++| 1 file changed, 58 insertions(+)|
+manifesto-engine	0	OK	   SKILL.md                            |  79 +++++++++++++++++++++++++-| references/jason-corpus-examples.md | 108 ++++++++++++++++++++++++++++++++++++| 2 files changed, 185 insertions(+), 2 deletions(-)|
+marketing-frame-engine	0	OK	  URL: https://github.com/jasonnamii/marketing-frame-engine|   SKILL.md | 58 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++| 1 file changed, 58 insertions(+)|
+meeting-engine	0	OK	 references/post-doctor-notes.md | 31 ++++++++++++++++++++++++++++++| scripts/validate.py             | 42 +++++++++++++++++++++++++++++++++++++++++| 3 files changed, 83 insertions(+)|
+metric-tracker	0	OK	 references/post-doctor-notes.md | 31 ++++++++++++++++++++++++++++++| scripts/validate.py             | 42 +++++++++++++++++++++++++++++++++++++++++| 4 files changed, 107 insertions(+)|
+multilingual-translator	0	OK	 references/workflow-detail.md   |  45 +++++++++| scripts/validate.py             |  42 ++++++++| 8 files changed, 332 insertions(+), 141 deletions(-)|
+negotiation-skill	0	OK	 references/post-doctor-notes.md | 31 ++++++++++++++++++++| scripts/validate.py             | 42 ++++++++++++++++++++++++++| 4 files changed, 146 insertions(+), 2 deletions(-)|
+obsidian-markdown	0	OK	total size is 9860  speedup is 32.43|✅ 민감정보 없음|변경 없음 — 이미 최신 (G1, 미푸시 커밋도 없음)|
+one-shot-graph	0	OK	total size is 38684  speedup is 147.09|✅ 민감정보 없음|변경 없음 — 이미 최신 (G1, 미푸시 커밋도 없음)|
+paper-engine	0	OK	 references/pre-write-guard.md       | 227 ++++++++++++++++++++++++++++| scripts/humanize_check.py           | 217 ++++++++++++++++++++++++++| 9 files changed, 1133 insertions(+), 175 deletions(-)|
+person-profiler	0	OK	total size is 17812  speedup is 24.64|✅ 민감정보 없음|변경 없음 — 이미 최신 (G1, 미푸시 커밋도 없음)|
+planning-skill	0	OK	 evals/cases.json                |  24 ++++++| references/post-doctor-notes.md |  31 ++++++++| 3 files changed, 130 insertions(+), 82 deletions(-)|
+policy-planning	0	OK	  URL: https://github.com/jasonnamii/policy-planning|   SKILL.md | 58 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++| 1 file changed, 58 insertions(+)|
+project-updater	0	OK	total size is 42063  speedup is 71.54|✅ 민감정보 없음|변경 없음 — 이미 최신 (G1, 미푸시 커밋도 없음)|
+research-frame	0	OK	total size is 87125  speedup is 0.98|✅ 민감정보 없음|변경 없음 — 이미 최신 (G1, 미푸시 커밋도 없음)|
+risk-radar	0	OK	total size is 77356  speedup is 156.27|✅ 민감정보 없음|변경 없음 — 이미 최신 (G1, 미푸시 커밋도 없음)|
+ruby-skill	0	OK	total size is 44437  speedup is 103.10|✅ 민감정보 없음|변경 없음 — 이미 최신 (G1, 미푸시 커밋도 없음)|
+sales-engine	0	OK	  URL: https://github.com/jasonnamii/sales-engine|   SKILL.md | 57 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++| 1 file changed, 57 insertions(+)|
