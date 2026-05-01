@@ -1,0 +1,4 @@
+export GITHUB_USER="jasoncnhG"
+export USER_HOME="$HOME"
+export PLUGIN_SKILLS_PATH="$HOME/Library/Application Support/Claude/local-agent-mode-sessions/skills-plugin/4784b446-6017-41b8-a732-6fa4618e5175/8cfaf936-a4d8-4573-968e-84bbeeef711f/skills"
+export REPO_ROOT="$HOME/github-repos/skill-repos"

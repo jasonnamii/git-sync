@@ -1,0 +1,18 @@
+name	rc	status
+ads-playbook	0	OK	  URL: https://github.com/jasonnamii/ads-playbook|   SKILL.md | 58 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++| 1 file changed, 58 insertions(+)|
+app-and-jang	0	OK	  URL: https://github.com/jasonnamii/app-and-jang|   SKILL.md | 58 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++| 1 file changed, 58 insertions(+)|
+app-architect	0	OK	  URL: https://github.com/jasonnamii/app-architect|   SKILL.md | 57 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++| 1 file changed, 57 insertions(+)|
+autoloop	0	OK	total size is 198784  speedup is 180.71|✅ 민감정보 없음 (allowlist로 2건 허용)|변경 없음 — 이미 최신 (G1, 미푸시 커밋도 없음)|
+benchmark-skill	0	OK	total size is 25779  speedup is 58.32|✅ 민감정보 없음|변경 없음 — 이미 최신 (G1, 미푸시 커밋도 없음)|
+biz-skill	0	OK	   SKILL.md         | 68 +++++++++++++++++++++++++++++++++++++++++++++++++-------| evals/cases.json | 67 ++++++++++++-------------------------------------------| 2 files changed, 74 insertions(+), 61 deletions(-)|
+bp-guide	0	OK	   SKILL.md                            |  74 ++++++++++++++++++++++++| references/jason-corpus-examples.md | 108 ++++++++++++++++++++++++++++++++++++| 2 files changed, 182 insertions(+)|
+brand-campaign	0	OK	   SKILL.md                            |  55 +++++++++++++++++-| references/jason-corpus-examples.md | 108 ++++++++++++++++++++++++++++++++++++| 2 files changed, 161 insertions(+), 2 deletions(-)|
+ceo-pipeline	0	OK	  URL: https://github.com/jasonnamii/ceo-pipeline|   SKILL.md | 59 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++| 1 file changed, 59 insertions(+)|
+consulting-toolkit	0	OK	total size is 29184  speedup is 89.52|✅ 민감정보 없음|변경 없음 — 이미 최신 (G1, 미푸시 커밋도 없음)|
+contract-reviewer	0	OK	  URL: https://github.com/jasonnamii/contract-reviewer|   SKILL.md | 58 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++| 1 file changed, 58 insertions(+)|
+copywriting-engine	0	OK	 references/post-doctor-notes.md     |  31 +++++++++++| scripts/validate.py                 |  42 ++++++++++++++| 4 files changed, 273 insertions(+), 2 deletions(-)|
+data-analytics	0	OK	total size is 60999  speedup is 85.55|✅ 민감정보 없음|변경 없음 — 이미 최신 (G1, 미푸시 커밋도 없음)|
+delegate-llm	0	OK	⚠️ 민감정보 발견 — STOP|  False positive? → /Users/jason/github-repos/skill-repos/git-sync/scripts/secret-scan-allowlist.txt 에 정규식 추가|❌ 민감정보 발견 — STOP|
+design-skill	0	OK	total size is 250947  speedup is 86.06|✅ 민감정보 없음|변경 없음 — 이미 최신 (G1, 미푸시 커밋도 없음)|
+fact-checker	0	OK	total size is 31691  speedup is 63.26|✅ 민감정보 없음|변경 없음 — 이미 최신 (G1, 미푸시 커밋도 없음)|
+financial-model	0	OK	   references/post-doctor-notes.md | 31 ++++++++++++++++++++++++++++++| scripts/validate.py             | 42 +++++++++++++++++++++++++++++++++++++++++| 2 files changed, 73 insertions(+)|
