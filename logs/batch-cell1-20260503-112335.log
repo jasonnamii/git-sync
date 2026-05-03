@@ -1,0 +1,29 @@
+총 53개 시작
+[ 1/53] ads-playbook ... OK
+[ 2/53] app-and-jang ... OK
+[ 3/53] app-architect ... OK
+[ 4/53] apple-canvas ... OK
+[ 5/53] autoloop ... OK
+[ 6/53] benchmark-skill ... OK
+[ 7/53] biz-skill ... OK
+[ 8/53] bp-guide ... OK
+[ 9/53] brand-campaign ... OK
+[10/53] ceo-pipeline ... OK
+[11/53] consulting-toolkit ... OK
+[12/53] contract-reviewer ... OK
+[13/53] copywriting-engine ... OK
+[14/53] data-analytics ... OK
+[15/53] delegate-llm ... FAIL rc=1
+Transfer starting: 5 files
+
+sent 231 bytes  received 20 bytes  2510000 bytes/sec
+total size is 19232  speedup is 76.62
+/Users/jason/github-repos/skill-repos/delegate-llm/README.md:24:- VAULT/_secrets/.env with OPENAI_API_KEY, GEMINI_API_KEY
+/Users/jason/github-repos/skill-repos/delegate-llm/README.ko.md:27:- `VAULT/_secrets/.env` (OPENAI_API_KEY, GEMINI_API_KEY)
+
+⚠️ 민감정보 발견 — STOP
+  False positive? → /Users/jason/github-repos/skill-repos/git-sync/scripts/secret-scan-allowlist.txt 에 정규식 추가
+❌ 민감정보 발견 — STOP
+[16/53] fact-checker ... OK
+[17/53] financial-model ... OK
+[18/53] git-sync ... 

@@ -1,0 +1,101 @@
+# Pre-Flight Scan — 20260503-112159
+# plugin_skills_path=/Users/jason/Library/Application Support/Claude/local-agent-mode-sessions/skills-plugin/4784b446-6017-41b8-a732-6fa4618e5175/8cfaf936-a4d8-4573-968e-84bbeeef711f/skills
+# repo_root=/Users/jason/github-repos/skill-repos
+# github_user=jasonnamii
+# cache_hit=0
+# remote_scan=OK
+# excluded_count=8
+
+# Excluded names:
+#   consolidate-memory
+#   docx
+#   pdf
+#   pptx
+#   schedule
+#   setup-cowork
+#   user-preferences
+#   xlsx
+
+name	origin	local	remote	cell	action
+ads-playbook	1	1	1	1	sync
+app-and-jang	1	1	1	1	sync
+app-architect	1	1	1	1	sync
+app-policy	0	1	0	6	ORPHAN_LOCAL_CONFIRM
+apple-box-design	0	1	1	5	ORIGIN_LOST_STOP
+apple-canvas	1	1	1	1	sync
+apple-design	0	1	0	6	ORPHAN_LOCAL_CONFIRM
+apple-design-style	0	1	0	6	ORPHAN_LOCAL_CONFIRM
+autoloop	1	1	1	1	sync
+benchmark-skill	1	1	1	1	sync
+biz-skill	1	1	1	1	sync
+bp-guide	1	1	1	1	sync
+brand-campaign	1	1	1	1	sync
+ceo-pipeline	1	1	1	1	sync
+claude-hooks	0	1	1	5	ORIGIN_LOST_STOP
+consulting-toolkit	1	1	1	1	sync
+contract-reviewer	1	1	1	1	sync
+copywriting-engine	1	1	1	1	sync
+data-analytics	1	1	1	1	sync
+delegate-llm	1	1	1	1	sync
+design-skill	0	1	1	5	ORIGIN_LOST_STOP
+dunamu-yanolja-proposal	0	0	1	7	external_skip
+fact-checker	1	1	1	1	sync
+financial-model	1	1	1	1	sync
+git-sync	1	1	1	1	sync
+github-deploy	1	1	1	1	sync
+gpt-talk-distiller	1	1	1	1	sync
+hail-mary-hit-analysis	0	0	1	7	external_skip
+helicoptering	0	1	0	6	ORPHAN_LOCAL_CONFIRM
+hit-skill	1	1	1	1	sync
+holdings-consulting	1	1	1	1	sync
+html-div-style	1	1	1	1	sync
+human-skill	1	1	1	1	sync
+hwaseong-kpop-strategy-v03	0	0	1	7	external_skip
+jasonnamii.github.io	0	0	1	7	external_skip
+kchannel82-standard-v1	0	0	1	7	external_skip
+kisas-app-2028-mobile	0	0	1	7	external_skip
+kisas-ip-scenario	0	0	1	7	external_skip
+kisas-planning-v2	0	0	1	7	external_skip
+kisas-platform-vision	0	0	1	7	external_skip
+kisas-shin-board-options	0	0	1	7	external_skip
+kisas-study-abroad-center-wireframe-kr	0	0	1	7	external_skip
+kisas-tf-agenda	0	0	1	7	external_skip
+management-skill	1	1	1	1	sync
+manifesto-engine	1	1	1	1	sync
+marketing-frame-engine	1	1	1	1	sync
+mbmg-meeting-questions	0	0	1	7	external_skip
+meeting-engine	1	1	1	1	sync
+meta-skill	0	1	0	6	ORPHAN_LOCAL_CONFIRM
+metric-tracker	1	1	1	1	sync
+multilingual-translator	1	1	1	1	sync
+negotiation-skill	1	1	1	1	sync
+obsidian-markdown	1	1	1	1	sync
+one-shot-graph	1	1	1	1	sync
+paper-engine	1	1	1	1	sync
+person-profiler	1	1	1	1	sync
+planning-skill	1	1	1	1	sync
+policy-planning	1	1	1	1	sync
+project-guideline-initializer	0	1	0	6	ORPHAN_LOCAL_CONFIRM
+project-update	0	1	0	6	ORPHAN_LOCAL_CONFIRM
+project-updater	1	1	1	1	sync
+research-frame	1	1	1	1	sync
+risk-radar	1	1	1	1	sync
+ruby-skill	1	1	1	1	sync
+sales-engine	1	1	1	1	sync
+session-briefing	1	1	1	1	sync
+skill-builder	1	1	1	1	sync
+skill-doctor	1	1	1	1	sync
+startup-investment	1	1	1	1	sync
+tech-human-resource-market-research	0	0	1	7	external_skip
+three-party-strategy	0	0	1	7	external_skip
+trigger-dictionary	0	1	0	6	ORPHAN_LOCAL_CONFIRM
+trigger-skill	1	1	1	1	sync
+triz	1	1	1	1	sync
+ui-action-designer	1	1	1	1	sync
+up-doctor	1	1	1	1	sync
+up-manager	1	1	1	1	sync
+user-preferences-team	0	1	0	6	ORPHAN_LOCAL_CONFIRM
+ux-advisor	1	1	1	1	sync
+vault-mount	1	1	1	1	sync
+works-choi	0	0	1	7	external_skip
+works-pdkim	0	0	1	7	external_skip
