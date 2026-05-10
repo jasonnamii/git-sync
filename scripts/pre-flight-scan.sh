@@ -78,14 +78,42 @@ if [ "$CACHE_HIT" -eq 0 ]; then
   fi
 fi
 
-# --- 2. ORIGIN, LOCAL 스캔
-ORIGIN_RAW=$(ls -1 "$PLUGIN_PATH" 2>/dev/null | grep -v '^\.' | while read n; do
-  [ -f "$PLUGIN_PATH/$n/SKILL.md" ] && echo "$n"
-done)
+# --- 2. ORIGIN, LOCAL 스캔 (v6.1: mtime 캐시 TTL=60s)
+# 배치 진입 시 한 번만 ls. 같은 배치 내 N개 호출 → 같은 캐시 재사용.
+ORIGIN_CACHE="$REPO_ROOT/git-sync/.origin-cache"
+LOCAL_CACHE="$REPO_ROOT/git-sync/.local-cache"
+LS_TTL=60
 
-LOCAL_RAW=$(ls -1 "$REPO_ROOT" 2>/dev/null | grep -v '^\.' | grep -v '^_archive' | while read n; do
-  [ -d "$REPO_ROOT/$n/.git" ] && echo "$n"
-done)
+cache_get_or_scan() {
+  # $1=cache_file, $2=scan_command (eval로 실행)
+  local cache="$1" cmd="$2"
+  if [ -f "$cache" ]; then
+    local cm cn ca
+    cm=$(stat -f %m "$cache" 2>/dev/null || stat -c %Y "$cache" 2>/dev/null || echo 0)
+    cn=$(date +%s)
+    ca=$((cn - cm))
+    if [ "$ca" -lt "$LS_TTL" ]; then
+      cat "$cache"
+      return 0
+    fi
+  fi
+  local result
+  result=$(eval "$cmd")
+  echo "$result" > "$cache"
+  echo "$result"
+}
+
+ORIGIN_RAW=$(cache_get_or_scan "$ORIGIN_CACHE" '
+  ls -1 "$PLUGIN_PATH" 2>/dev/null | grep -v "^\." | while read n; do
+    [ -f "$PLUGIN_PATH/$n/SKILL.md" ] && echo "$n"
+  done
+')
+
+LOCAL_RAW=$(cache_get_or_scan "$LOCAL_CACHE" '
+  ls -1 "$REPO_ROOT" 2>/dev/null | grep -v "^\." | grep -v "^_archive" | while read n; do
+    [ -d "$REPO_ROOT/$n/.git" ] && echo "$n"
+  done
+')
 
 # --- 3. 합집합 + 제외 필터
 ALL_NAMES_RAW=$(printf "%s\n%s\n%s\n" "$ORIGIN_RAW" "$LOCAL_RAW" "$REMOTE_RAW" | sort -u | grep -v '^$')

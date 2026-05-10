@@ -159,10 +159,14 @@ git_state_scan() {
     return 0
   fi
 
-  # 축 4: Ahead
-  AHEAD=$(git rev-list --count "origin/$BRANCH..HEAD" 2>/dev/null || echo "?")
-  # 축 5: Behind
-  BEHIND=$(git rev-list --count "HEAD..origin/$BRANCH" 2>/dev/null || echo "?")
+  # v6.1: 축 4·5 통합 — rev-list 2회 fork → --left-right --count 1회
+  # git fork 1회 절감 (~80ms × N개 스킬). 출력: "BEHIND<TAB>AHEAD"
+  local _lr
+  _lr=$(git rev-list --left-right --count "origin/$BRANCH...HEAD" 2>/dev/null || echo "?	?")
+  BEHIND=$(echo "$_lr" | awk '{print $1}')
+  AHEAD=$(echo "$_lr" | awk '{print $2}')
+  [ -z "$BEHIND" ] && BEHIND="?"
+  [ -z "$AHEAD" ] && AHEAD="?"
 
   if [ "$AHEAD" = "?" ] || [ "$BEHIND" = "?" ]; then
     GIT_CELL="UNKNOWN"

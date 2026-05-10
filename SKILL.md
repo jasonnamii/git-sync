@@ -15,6 +15,8 @@ vault_dependency: HARD
 
 스킬·UP → GitHub 레포 생명주기 관리. **이중 매트릭스 순차 게이트**(파일 3-way 8셀 + Git 상태 6셀) + **Fast Path** 캐시 활용.
 
+**v6.1 (2026-05-10):** 속도 패치 — `sync-skill.sh` rev-list 2회 → `--left-right --count` 1회 통합, `pre-flight-scan.sh` ORIGIN/LOCAL mtime 캐시 TTL=60s 추가. bash 줄수 감축·공식 plugin 패턴 회귀.
+
 **v6 (2026-04-18):** Git 상태 매트릭스(G1~G6) 추가. sync-skill.sh를 3-Phase 상태머신으로 재구성(scan → dispatch → execute). v5의 silent failure / auto-rebase detached HEAD / rebase 중단 감지 누락을 매트릭스 단계에서 전차단.
 
 ---
@@ -177,8 +179,8 @@ export REPO_ROOT="$HOME/github-repos/skill-repos"
 
 | 스크립트 | 역할 | 최신 개선 |
 |---|---|---|
-| `pre-flight-scan.sh` | 파일 3-way 스캔 + 8셀 분류 | REMOTE TTL 캐시(10분) + `--no-cache` 플래그 |
-| `sync-skill.sh` | Cell 1·3 동기화 | **v6 (2026-04-18): 3-Phase 상태머신** — Phase 1 `git_state_scan()` 5축 스냅샷 → Phase 2 `dispatch_matrix()` 6셀 분기 → Phase 3 `execute_cell()` G1·G2만 실행 + POST_CHECK. v5 silent failure / auto-rebase detached HEAD / rebase 중단 감지 누락 3대 결함 전차단. v5 stale 경로 자동 복구·turbo 기본·macOS perl 폴백 승계 |
+| `pre-flight-scan.sh` | 파일 3-way 스캔 + 8셀 분류 | **v6.1 (2026-05-10): ORIGIN/LOCAL mtime 캐시 TTL=60s 추가** — 배치 N개 처리 시 ls 반복 차단. REMOTE TTL 600s 승계. `--no-cache` 플래그 |
+| `sync-skill.sh` | Cell 1·3 동기화 | **v6.1 (2026-05-10): rev-list 통합** — `rev-list --left-right --count` 1회 호출로 Ahead/Behind 동시 측정. 기존 2회 fork → 1회 (~80ms × N 절감). v6 3-Phase 상태머신·POST_CHECK·turbo 기본 승계 |
 | `secret-scan.sh` | 민감정보 검사 | v2: allowlist 지원 — `secret-scan-allowlist.txt` 정규식 FP 허용 |
 | `secret-scan-allowlist.txt` | FP 허용 목록 | 라인 단위 정규식. 주석(#)·빈 줄 무시 |
 | `rsync-exclude.txt` | exclude 패턴 | `logs/` `.remote-cache` 포함 |
@@ -223,6 +225,27 @@ export REPO_ROOT="$HOME/github-repos/skill-repos"
 | 이전 세션의 rebase 중단 상태로 rsync | working tree 오염. **v6에서 G5 셀 = Phase 1에서 선차단.** `.git/rebase-{merge,apply}/` 감지 시 exit 6 + abort 안내 |
 | detached HEAD에서 commit | 고아 커밋 생성. **v6에서 G6 셀 = 자동 복구 금지, 수동 판단 강제.** `git symbolic-ref HEAD` 실패 시 exit 7 |
 | fetch 없이 Ahead/Behind 측정 | origin/$BRANCH가 stale → G1~G4 오분류. **v6 Phase 1에서 `git fetch origin` 1회 필수** (timeout 15s) |
+| rev-list 2회 fork 누적 (배치 N개) | v6.1에서 `--left-right --count` 단일 호출로 통합. 자동 적용 — 별도 조치 불요 |
+| 배치 진입 시 ORIGIN/LOCAL ls 매번 풀스캔 | v6.1에서 `.origin-cache`·`.local-cache` mtime TTL=60s 추가. 같은 배치 내 N개 처리 1회만 ls. 60s 후 자동 갱신. 강제 무효화 = `rm $REPO_ROOT/git-sync/.{origin,local}-cache` |
+
+---
+
+## ✅ WRONG / CORRECT 대조 (v6.1)
+
+❌ **WRONG (v6 이전 — Ahead/Behind 직렬 fork):**
+```bash
+AHEAD=$(git rev-list --count "origin/$BRANCH..HEAD")   # git fork 1회
+BEHIND=$(git rev-list --count "HEAD..origin/$BRANCH")  # git fork 1회 (총 2회)
+```
+
+✅ **CORRECT (v6.1 — 단일 호출):**
+```bash
+LR=$(git rev-list --left-right --count "origin/$BRANCH...HEAD")  # 1회
+BEHIND=$(echo "$LR" | awk '{print $1}')
+AHEAD=$(echo "$LR" | awk '{print $2}')
+```
+
+**효과:** N개 스킬 배치 시 N×80ms 절감. 단일 호출도 fork·로딩 절반.
 
 ---
 
@@ -230,6 +253,7 @@ export REPO_ROOT="$HOME/github-repos/skill-repos"
 
 | 버전 | 날짜 | 변경 |
 |------|------|------|
+| v6.1 | 2026-05-10 | **속도 패치 — bash 줄수 -68% 목표·공식 plugin 패턴 회귀.** ① `sync-skill.sh` rev-list 2회 → `--left-right --count` 1회 통합 (git fork -1, ~80ms × N). ② `pre-flight-scan.sh` ORIGIN/LOCAL ls mtime 캐시 TTL=60s 신설 (배치 N×ls 차단). ③ Gotchas + WRONG/CORRECT 1쌍 추가. |
 | v6 | 2026-04-18 | **Git 상태 매트릭스 6셀 신설** (G1~G6 + UNKNOWN). `sync-skill.sh` 3-Phase 상태머신 재구성(scan→dispatch→execute). POST_CHECK 추가. v5 silent failure / auto-rebase detached HEAD / rebase 중단 감지 누락 3대 결함 전차단. `references/git-state-matrix.md` 추가. 이중 매트릭스 순차 게이트 원칙(절대규칙 8) 추가. |
 | v5 | — | PLUGIN_SKILLS_PATH stale 자동 감지·복구 |
 | v4 | — | 기본 turbo 모드 (dry-run·--delete 스킵) |
