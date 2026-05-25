@@ -1,0 +1,130 @@
+# Pre-Flight Scan — 20260525-192104
+# plugin_skills_path=/Users/jason/Library/Application Support/Claude/local-agent-mode-sessions/skills-plugin/022043e0-41f9-4ccf-8ffc-75d945b482af/73043353-c0d2-46d6-88ae-d7379123f601/skills
+# repo_root=/Users/jason/github-repos/skill-repos
+# github_user=jasonnamii
+# cache_hit=0
+# remote_scan=OK
+# excluded_count=8
+
+# Excluded names:
+#   consolidate-memory
+#   docx
+#   pdf
+#   pptx
+#   schedule
+#   setup-cowork
+#   user-preferences
+#   xlsx
+
+name	origin	local	remote	cell	action
+ads-playbook	1	1	1	1	sync
+app-and-jang	1	1	1	1	sync
+app-architect	1	1	1	1	sync
+app-policy	0	1	0	6	ORPHAN_LOCAL_CONFIRM
+apple-box-design	0	1	1	5	ORIGIN_LOST_STOP
+apple-canvas	1	0	1	3	clone+sync
+apple-design-style	0	1	0	6	ORPHAN_LOCAL_CONFIRM
+autoloop	1	1	1	1	sync
+benchmark-skill	1	1	1	1	sync
+biz-skill	1	1	1	1	sync
+box-cut-design	1	0	1	3	clone+sync
+bp-guide	1	1	1	1	sync
+brand-campaign	1	1	1	1	sync
+ceo-pipeline	1	1	1	1	sync
+claude-hooks	0	1	1	5	ORIGIN_LOST_STOP
+consulting-toolkit	1	1	1	1	sync
+contract-consulting	1	1	1	1	sync
+copywriting-engine	0	1	0	6	ORPHAN_LOCAL_CONFIRM
+copywriting-skill	1	0	1	3	clone+sync
+data-analytics	1	1	1	1	sync
+delegate-llm	0	0	1	7	external_skip
+design-skill	0	1	1	5	ORIGIN_LOST_STOP
+dispute-skill	1	1	1	1	sync
+dunamu-yanolja-proposal	0	0	1	7	external_skip
+editorial-design	1	0	1	3	clone+sync
+election-forecaster	1	0	1	3	clone+sync
+esg-compliance	1	1	1	1	sync
+fact-checker	1	1	1	1	sync
+financial-model	1	1	1	1	sync
+git-sync	1	1	1	1	sync
+github-deploy	1	1	1	1	sync
+gpt-come-on	0	1	1	5	ORIGIN_LOST_STOP
+gpt-talk-distiller	1	0	1	3	clone+sync
+hail-mary-hit-analysis	0	0	1	7	external_skip
+helicoptering	0	1	0	6	ORPHAN_LOCAL_CONFIRM
+hit-skill	1	1	1	1	sync
+holdings-consulting	1	1	1	1	sync
+html-div-style	1	1	1	1	sync
+html-finisher	1	0	1	3	clone+sync
+human-skill	1	1	1	1	sync
+hwaseong-kpop-strategy-v03	0	0	1	7	external_skip
+investment-skill	1	0	1	3	clone+sync
+ip-skill	1	1	1	1	sync
+jasonnamii.github.io	0	0	1	7	external_skip
+kchannel82-standard-v1	0	0	1	7	external_skip
+kisas-app-2028-mobile	0	0	1	7	external_skip
+kisas-ip-design-d1	1	0	1	3	clone+sync
+kisas-ip-scenario	0	0	1	7	external_skip
+kisas-planning-v2	0	0	1	7	external_skip
+kisas-platform-vision	0	0	1	7	external_skip
+kisas-shin-board-options	0	0	1	7	external_skip
+kisas-study-abroad-center-wireframe-kr	0	0	1	7	external_skip
+kisas-tf-agenda	0	0	1	7	external_skip
+labor-hr-skill	1	0	1	3	clone+sync
+management-skill	1	1	1	1	sync
+manifesto-engine	0	1	0	6	ORPHAN_LOCAL_CONFIRM
+manifesto-skill	1	0	1	3	clone+sync
+marketing-frame	1	0	1	3	clone+sync
+mbmg-meeting-questions	0	0	1	7	external_skip
+media-buying	1	0	1	3	clone+sync
+meeting-engine	0	1	0	6	ORPHAN_LOCAL_CONFIRM
+meeting-minutes	1	0	1	3	clone+sync
+meta-skill	0	1	0	6	ORPHAN_LOCAL_CONFIRM
+metric-tracker	1	1	1	1	sync
+multilingual-translator	0	1	0	6	ORPHAN_LOCAL_CONFIRM
+negotiation-skill	1	1	1	1	sync
+obsidian-markdown	1	1	1	1	sync
+one-shot-graph	0	1	0	6	ORPHAN_LOCAL_CONFIRM
+paper-engine	0	1	0	6	ORPHAN_LOCAL_CONFIRM
+person-profiler	0	1	0	6	ORPHAN_LOCAL_CONFIRM
+planning-skill	1	1	1	1	sync
+policy-planning	1	1	1	1	sync
+prism-design	1	0	1	3	clone+sync
+profiler-skill	1	0	1	3	clone+sync
+project-guideline-initializer	0	1	0	6	ORPHAN_LOCAL_CONFIRM
+project-update	0	1	0	6	ORPHAN_LOCAL_CONFIRM
+project-updater	1	1	1	1	sync
+regulatory-skill	1	1	1	1	sync
+research-frame	0	1	0	6	ORPHAN_LOCAL_CONFIRM
+research-skill	1	0	1	3	clone+sync
+risk-radar	1	1	1	1	sync
+ruby-skill	1	1	1	1	sync
+sales-engine	0	1	0	6	ORPHAN_LOCAL_CONFIRM
+sales-skill	1	0	1	3	clone+sync
+session-briefing	0	1	1	5	ORIGIN_LOST_STOP
+session-skill	1	0	1	3	clone+sync
+shaper-skill	1	0	1	3	clone+sync
+skill-builder	1	1	1	1	sync
+skill-doctor	1	1	1	1	sync
+startup-investment	0	1	0	6	ORPHAN_LOCAL_CONFIRM
+submission-cleanup	1	0	1	3	clone+sync
+tax-skill	1	0	1	3	clone+sync
+tech-human-resource-market-research	0	0	1	7	external_skip
+teenage-design	1	0	1	3	clone+sync
+three-party-strategy	0	0	1	7	external_skip
+translator-skill	1	0	1	3	clone+sync
+trigger-dictionary	0	1	0	6	ORPHAN_LOCAL_CONFIRM
+trigger-skill	1	0	1	3	clone+sync
+triz	0	1	0	6	ORPHAN_LOCAL_CONFIRM
+triz-skill	1	0	1	3	clone+sync
+ui-action-designer	0	1	0	6	ORPHAN_LOCAL_CONFIRM
+ui-consulting	1	0	1	3	clone+sync
+ui-designer	1	0	1	3	clone+sync
+up-doctor	1	0	1	3	clone+sync
+up-manager	1	1	1	1	sync
+user-preferences-team	0	1	1	5	ORIGIN_LOST_STOP
+ux-advisor	0	1	0	6	ORPHAN_LOCAL_CONFIRM
+vault-mount	1	0	1	3	clone+sync
+visualize-skill	1	0	1	3	clone+sync
+works-choi	0	0	1	7	external_skip
+works-pdkim	0	0	1	7	external_skip
