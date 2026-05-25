@@ -112,6 +112,35 @@ else
   exit 2
 fi
 
+# v6.2: stale UUID 사본 자동 청소 (재스캔 뺑뺑이 영구 차단)
+# 현행 활성 경로(PLUGIN_SKILLS_PATH)의 상위 UUID 2단계를 KEEP. skills-plugin 하위
+# 다른 UUID 폴더 중 mtime 7일 이상 비활성만 삭제. 현행·활성 판정 실패 시 아무것도 안 지움.
+prune_stale_skills_plugin() {
+  local skp_root keep_parent now cutoff d m
+  skp_root="$HOME/Library/Application Support/Claude/local-agent-mode-sessions/skills-plugin"
+  [ -d "$skp_root" ] || return 0
+  # KEEP = PLUGIN_SKILLS_PATH에서 /skills 한 단계 위 (= user-UUID 디렉터리)
+  keep_parent="$(dirname "$PLUGIN_SKILLS_PATH")"
+  # fail-safe: KEEP이 skp_root 하위가 아니면 (경로 이상) 청소 중단
+  case "$keep_parent" in
+    "$skp_root"/*) : ;;
+    *) return 0 ;;
+  esac
+  now=$(date +%s); cutoff=$((now - 7*24*3600))
+  for d in "$skp_root"/*/*; do
+    [ -d "$d/skills" ] || continue
+    [ "$d" = "$keep_parent" ] && continue
+    if m=$(stat -f %m "$d" 2>/dev/null); then :
+    elif m=$(stat -c %Y "$d" 2>/dev/null); then :
+    else continue; fi
+    [ "$m" -lt "$cutoff" ] || continue   # 7일 미만 = 최근 활성 가능성 -> 보존
+    rm -rf "$d" && echo "[prune] stale 사본 정리: $d" >&2
+  done
+  # 빈 상위 UUID 폴더 정리
+  find "$skp_root" -mindepth 1 -maxdepth 1 -type d -empty -delete 2>/dev/null
+}
+prune_stale_skills_plugin
+
 SRC="$PLUGIN_SKILLS_PATH/$SKILL_NAME"
 REPO="$REPO_ROOT/$SKILL_NAME"
 GIT_SYNC_REPO="$REPO_ROOT/git-sync"

@@ -15,6 +15,8 @@ vault_dependency: HARD
 
 스킬·UP → GitHub 레포 생명주기 관리. **이중 매트릭스 순차 게이트**(파일 3-way 8셀 + Git 상태 6셀) + **Fast Path** 캐시 활용.
 
+**v6.2 (2026-05-25):** stale UUID 사본 자동 청소 — `sync-skill.sh` ENV resolve 직후 `prune_stale_skills_plugin()` 추가. Cowork 재기동마다 쌓이는 옛 UUID 스킬 사본을 자동 정리(현행 활성 경로·7일 미만 비활성은 보존). v5 재스캔 후보가 N벌로 누적되며 첫 호출이 느려지던 "뺑뺑이" 영구 차단.
+
 **v6.1 (2026-05-10):** 속도 패치 — `sync-skill.sh` rev-list 2회 → `--left-right --count` 1회 통합, `pre-flight-scan.sh` ORIGIN/LOCAL mtime 캐시 TTL=60s 추가. bash 줄수 감축·공식 plugin 패턴 회귀.
 
 **v6 (2026-04-18):** Git 상태 매트릭스(G1~G6) 추가. sync-skill.sh를 3-Phase 상태머신으로 재구성(scan → dispatch → execute). v5의 silent failure / auto-rebase detached HEAD / rebase 중단 감지 누락을 매트릭스 단계에서 전차단.
@@ -180,7 +182,7 @@ export REPO_ROOT="$HOME/github-repos/skill-repos"
 | 스크립트 | 역할 | 최신 개선 |
 |---|---|---|
 | `pre-flight-scan.sh` | 파일 3-way 스캔 + 8셀 분류 | **v6.1 (2026-05-10): ORIGIN/LOCAL mtime 캐시 TTL=60s 추가** — 배치 N개 처리 시 ls 반복 차단. REMOTE TTL 600s 승계. `--no-cache` 플래그 |
-| `sync-skill.sh` | Cell 1·3 동기화 | **v6.1 (2026-05-10): rev-list 통합** — `rev-list --left-right --count` 1회 호출로 Ahead/Behind 동시 측정. 기존 2회 fork → 1회 (~80ms × N 절감). v6 3-Phase 상태머신·POST_CHECK·turbo 기본 승계 |
+| `sync-skill.sh` | Cell 1·3 동기화 | **v6.2 (2026-05-25): stale 사본 자동 청소** — ENV resolve 직후 `prune_stale_skills_plugin()`로 현행 외 7일↑ 비활성 UUID 폴더 자동 삭제. 재스캔 뺑뺑이 영구 차단. v6.1 rev-list 통합·v6 3-Phase 상태머신·POST_CHECK·turbo 기본 승계 |
 | `secret-scan.sh` | 민감정보 검사 | v2: allowlist 지원 — `secret-scan-allowlist.txt` 정규식 FP 허용 |
 | `secret-scan-allowlist.txt` | FP 허용 목록 | 라인 단위 정규식. 주석(#)·빈 줄 무시 |
 | `rsync-exclude.txt` | exclude 패턴 | `logs/` `.remote-cache` 포함 |
@@ -227,6 +229,8 @@ export REPO_ROOT="$HOME/github-repos/skill-repos"
 | fetch 없이 Ahead/Behind 측정 | origin/$BRANCH가 stale → G1~G4 오분류. **v6 Phase 1에서 `git fetch origin` 1회 필수** (timeout 15s) |
 | rev-list 2회 fork 누적 (배치 N개) | v6.1에서 `--left-right --count` 단일 호출로 통합. 자동 적용 — 별도 조치 불요 |
 | 배치 진입 시 ORIGIN/LOCAL ls 매번 풀스캔 | v6.1에서 `.origin-cache`·`.local-cache` mtime TTL=60s 추가. 같은 배치 내 N개 처리 1회만 ls. 60s 후 자동 갱신. 강제 무효화 = `rm $REPO_ROOT/git-sync/.{origin,local}-cache` |
+| Cowork 재기동마다 옛 UUID 스킬 사본 누적 → 재스캔 뺑뺑이 | v6.2 `prune_stale_skills_plugin()`가 매 동기 시 자동 청소. 현행 활성 경로·7일 미만 비활성은 보존, 그 외만 삭제. 활성세션 다중 운용 시 7일 cutoff가 보호막 — 안전 우선이라 덜 지우는 쪽 |
+| 청소 훅이 현행 폴더를 지울까 우려 | KEEP = `dirname $PLUGIN_SKILLS_PATH`(user-UUID). KEEP이 skills-plugin 하위가 아니면 즉시 return(fail-safe). 현행은 구조적으로 삭제 불가 |
 
 ---
 
@@ -253,6 +257,7 @@ AHEAD=$(echo "$LR" | awk '{print $2}')
 
 | 버전 | 날짜 | 변경 |
 |------|------|------|
+| v6.2 | 2026-05-25 | **stale UUID 사본 자동 청소 — 재스캔 뺑뺑이 영구 차단.** `sync-skill.sh` ENV resolve 직후 `prune_stale_skills_plugin()` 신설. 현행 활성 경로(PLUGIN_SKILLS_PATH 상위 UUID)는 절대 보존 + 7일 미만 비활성도 보존, 그 외 stale UUID 폴더만 `rm -rf`. KEEP이 skills-plugin 하위가 아니면 청소 중단(fail-safe). 빈 상위 UUID 폴더 정리 포함. |
 | v6.1 | 2026-05-10 | **속도 패치 — bash 줄수 -68% 목표·공식 plugin 패턴 회귀.** ① `sync-skill.sh` rev-list 2회 → `--left-right --count` 1회 통합 (git fork -1, ~80ms × N). ② `pre-flight-scan.sh` ORIGIN/LOCAL ls mtime 캐시 TTL=60s 신설 (배치 N×ls 차단). ③ Gotchas + WRONG/CORRECT 1쌍 추가. |
 | v6 | 2026-04-18 | **Git 상태 매트릭스 6셀 신설** (G1~G6 + UNKNOWN). `sync-skill.sh` 3-Phase 상태머신 재구성(scan→dispatch→execute). POST_CHECK 추가. v5 silent failure / auto-rebase detached HEAD / rebase 중단 감지 누락 3대 결함 전차단. `references/git-state-matrix.md` 추가. 이중 매트릭스 순차 게이트 원칙(절대규칙 8) 추가. |
 | v5 | — | PLUGIN_SKILLS_PATH stale 자동 감지·복구 |
