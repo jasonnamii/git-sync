@@ -1,0 +1,4 @@
+export GITHUB_USER="jasonnamii"
+export USER_HOME="$HOME"
+export PLUGIN_SKILLS_PATH="/Users/jason/Library/Application Support/Claude/local-agent-mode-sessions/skills-plugin/022043e0-41f9-4ccf-8ffc-75d945b482af/73043353-c0d2-46d6-88ae-d7379123f601/skills"
+export REPO_ROOT="$HOME/github-repos/skill-repos"

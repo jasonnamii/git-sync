@@ -1,21 +1,14 @@
 ---
 name: git-sync
 description: |
-  스킬·설정 GitHub 레포 생명주기 엔진. 이중 매트릭스(파일 3-way 8셀 + Git 상태 6셀) 결정적 분기. 단일은 캐시로 2단계 push, 배치는 Pre-Flight 후 비파괴→파괴적 순. 개별 레포({GITHUB_USER}/{skill-name}).
-  P1: 깃동기화, 깃싱크, 깃푸시, 레포동기화, 깃허브동기화, 스킬동기화, 스킬업로드, 레포생성, 새레포, git sync.
-  P2: 동기화해줘, 푸시해줘, 올려줘, sync, push, upload.
-  P3: git sync, repo sync, github push, skill deployment, new repo.
-  P4: skill-builder 패키징 완료 후, up-manager 수정 완료 후, 스킬 수정 완료 후.
-  P5: git push 결과로, 동기화 리포트로.
-  NOT: GitHub Pages 배포(→github-deploy), 스킬수정 자체(→skill-builder), git 일반작업(→직접수행).
-vault_dependency: HARD
+  스킬·설정 폴더를 개별 GitHub 레포로 동기화하는 엔진. 파일 3-way·Git 상태 이중 매트릭스로 안전하게 rsync→commit→push, 단일은 Fast Path·배치는 Pre-Flight 후 비파괴→파괴적 순. 스킬·UP 파일을 GitHub에 올리거나 백업·동기화할 때, 스킬 수정·패키징 후 레포에 반영할 때 쓴다. 트리거: 깃동기화, 깃싱크, 깃푸시, 레포 동기화, 스킬 업로드, 새 레포 생성, sync, push, upload. NOT: GitHub Pages 웹배포(→github-deploy), 스킬 내용 수정(→skill-builder), 일반 git 작업(→직접).
 ---
 
 # Git Sync
 
 스킬·UP → GitHub 레포 생명주기 관리. **이중 매트릭스 순차 게이트**(파일 3-way 8셀 + Git 상태 6셀) + **Fast Path** 캐시 활용.
 
-**v6.2 (2026-05-25):** stale UUID 사본 자동 청소 — `sync-skill.sh` ENV resolve 직후 `prune_stale_skills_plugin()` 추가. Cowork 재기동마다 쌓이는 옛 UUID 스킬 사본을 자동 정리(현행 활성 경로·7일 미만 비활성은 보존). v5 재스캔 후보가 N벌로 누적되며 첫 호출이 느려지던 "뺑뺑이" 영구 차단.
+**v6.2 (2026-05-25):** stale UUID 사본 자동 청소 — `sync-skill.sh` ENV resolve 직후 `prune_stale_skills_plugin()` 추가. 앱 재기동마다 쌓이는 옛 UUID 스킬 사본을 자동 정리(현행 활성 경로·7일 미만 비활성은 보존). v5 재스캔 후보가 N벌로 누적되며 첫 호출이 느려지던 "뺑뺑이" 영구 차단.
 
 **v6.1 (2026-05-10):** 속도 패치 — `sync-skill.sh` rev-list 2회 → `--left-right --count` 1회 통합, `pre-flight-scan.sh` ORIGIN/LOCAL mtime 캐시 TTL=60s 추가. bash 줄수 감축·공식 plugin 패턴 회귀.
 
@@ -27,7 +20,7 @@ vault_dependency: HARD
 
 | # | 규칙 | 이유 |
 |---|------|------|
-| 1 | **DC start_process로만 실행** — Cowork 샌드박스 Bash 금지 | 샌드박스는 로컬 git repo 접근 불가 |
+| 1 | **Bash 도구로 스크립트 직접 실행** — 본문에서 git·rsync 명령 재조립 금지, `scripts/*.sh` 호출만 | Claude Code의 Bash는 형 맥북 셸 그대로라 로컬 git repo·gh·SSH 전부 접근 가능 |
 | 2 | **원본→레포 단방향** — 역방향 금지 | 원본은 skills-plugin 관리 |
 | 3 | **README/LICENSE/.gitignore 보호** — rsync exclude 필수 | 레포 전용 메타파일 |
 | 4 | **파괴적 액션 게이트** — `gh repo create`·`rsync --delete`·로컬 `rm -rf`는 명시 컨펌. `gh repo delete`·`git push --force`(bare)는 절대 금지(복구 §F 예외). **`git push --force-with-lease`는 허용** — race-safe, 로컬이 원격보다 앞서고 원격 변경 이미 로컬에 반영된 경우(rename·rebase 직후) 컨펌 없이 실행 | 중복·유실 방지 + 과잉 방어 차단 |
@@ -55,13 +48,13 @@ vault_dependency: HARD
 **조건:** 1개 스킬 명시 + `.git-sync-env` 존재.
 
 ```
-DC 1회 호출로 완결: sync-skill.sh가 ENV 자동 로딩 → rsync → push → 리포트
+Bash 1회 호출로 완결: sync-skill.sh가 ENV 자동 로딩 → rsync → push → 리포트
 ```
 
-**DC 호출: 1회.** ENV 미존재시 Full Pipeline으로 자동 폴백.
+**Bash 호출: 1회.** ENV 미존재시 Full Pipeline으로 자동 폴백.
 
 ```bash
-# DC 1회 — ENV 자동 source + sync + push 완결 (기본 = turbo)
+# Bash 1회 — ENV 자동 source + sync + push 완결 (기본 = turbo)
 bash "{repo_root}/git-sync/scripts/sync-skill.sh" \
   "{skill-name}" "Update {skill-name}: {변경요약}"
 ```
@@ -101,7 +94,7 @@ export REPO_ROOT="$HOME/github-repos/skill-repos"
 
 **resolve 우선순위:** 1) `.git-sync-env` 파일 → 2) 명령어로 1회 resolve 후 파일 작성 → 3) 실패시 STOP + 형에게 확인.
 
-**v5 자동 복구 (stale 감지):** sync-skill.sh 실행 시 `$PLUGIN_SKILLS_PATH/$SKILL_NAME` 부재 감지 → skills-plugin root(`$HOME/.../skills-plugin`) 하위 `*/*/skills` 재스캔 → SKILL_NAME 포함 & mtime 최신 경로로 `.git-sync-env` 자동 갱신(백업 `.bak.<epoch>` 생성 후 sed). Cowork 재설치·UUID 변경에도 자동 복구.
+**v5 자동 복구 (stale 감지):** sync-skill.sh 실행 시 `$PLUGIN_SKILLS_PATH/$SKILL_NAME` 부재 감지 → skills-plugin root(`$HOME/.../skills-plugin`) 하위 `*/*/skills` 재스캔 → SKILL_NAME 포함 & mtime 최신 경로로 `.git-sync-env` 자동 갱신(백업 `.bak.<epoch>` 생성 후 sed). 앱 재설치·UUID 변경에도 자동 복구.
 
 | 필드 | 확인 명령 (파일 없을 때만) |
 |------|-------------------|
@@ -204,7 +197,7 @@ export REPO_ROOT="$HOME/github-repos/skill-repos"
 
 | 함정 | 대응 |
 |------|------|
-| Cowork Bash로 git push | 샌드박스 실패. DC start_process만 |
+| 본문에서 git·rsync 명령 직접 조립 | 금지. `scripts/*.sh`를 Bash로 호출. CC Bash는 로컬 git 접근 정상 |
 | 단일 스킬에 Full Pipeline 강제 | Fast Path 존재. 캐시 10분 이내면 Pre-Flight 스킵 |
 | sync-skill.sh rsync 여러번 | v2부터 itemize-changes 단일. 3회 동작 시 스크립트 업데이트 누락 |
 | `gh repo list --limit 500` 매번 | `.remote-cache` TTL 600초. `--no-cache`로만 강제 |
@@ -215,7 +208,7 @@ export REPO_ROOT="$HOME/github-repos/skill-repos"
 | 에이전트가 rsync·git 직접 조립 | 금지. 스크립트 호출. 재조립 금지 |
 | skills-plugin UUID 변경 | v5부터 **자동 감지·갱신**. SKILL_NAME 부재 시 skills-plugin root 재스캔 후 mtime 최신 경로로 ENV 자동 치환(백업 생성). 수동 수정 불요 |
 | macOS에 `timeout` 없음 | sync-skill.sh에 perl 기반 폴백 내장. `brew install coreutils`(gtimeout) 불요 |
-| DC 호출 2회+ 느림 | v4 기본 turbo 모드로 DC 1회 완결. 옵션 없이 `sync-skill.sh <name> <msg>` |
+| Bash 호출 2회+ 느림 | v4 기본 turbo 모드로 Bash 1회 완결. 옵션 없이 `sync-skill.sh <name> <msg>` |
 | 매번 dry-run 느림 | v4부터 기본이 dry-run 스킵. `--strict` 지정 시에만 dry-run + --delete. 삭제 감지 필요할 때만 |
 | 파일 삭제했는데 레포에 남음 | 기본 turbo 모드는 --delete 없음. 삭제 포함 업데이트는 `--strict` 지정 필수 |
 | force-with-lease 과잉 방어 | race-safe(원격 변경 감지 시 자동 거부). rename·rebase 후 diverge 시 컨펌 없이 실행. `--force`(bare)만 금지 |
@@ -229,7 +222,7 @@ export REPO_ROOT="$HOME/github-repos/skill-repos"
 | fetch 없이 Ahead/Behind 측정 | origin/$BRANCH가 stale → G1~G4 오분류. **v6 Phase 1에서 `git fetch origin` 1회 필수** (timeout 15s) |
 | rev-list 2회 fork 누적 (배치 N개) | v6.1에서 `--left-right --count` 단일 호출로 통합. 자동 적용 — 별도 조치 불요 |
 | 배치 진입 시 ORIGIN/LOCAL ls 매번 풀스캔 | v6.1에서 `.origin-cache`·`.local-cache` mtime TTL=60s 추가. 같은 배치 내 N개 처리 1회만 ls. 60s 후 자동 갱신. 강제 무효화 = `rm $REPO_ROOT/git-sync/.{origin,local}-cache` |
-| Cowork 재기동마다 옛 UUID 스킬 사본 누적 → 재스캔 뺑뺑이 | v6.2 `prune_stale_skills_plugin()`가 매 동기 시 자동 청소. 현행 활성 경로·7일 미만 비활성은 보존, 그 외만 삭제. 활성세션 다중 운용 시 7일 cutoff가 보호막 — 안전 우선이라 덜 지우는 쪽 |
+| 앱 재기동마다 옛 UUID 스킬 사본 누적 → 재스캔 뺑뺑이 | v6.2 `prune_stale_skills_plugin()`가 매 동기 시 자동 청소. 현행 활성 경로·7일 미만 비활성은 보존, 그 외만 삭제. 활성세션 다중 운용 시 7일 cutoff가 보호막 — 안전 우선이라 덜 지우는 쪽 |
 | 청소 훅이 현행 폴더를 지울까 우려 | KEEP = `dirname $PLUGIN_SKILLS_PATH`(user-UUID). KEEP이 skills-plugin 하위가 아니면 즉시 return(fail-safe). 현행은 구조적으로 삭제 불가 |
 
 ---

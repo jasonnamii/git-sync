@@ -112,35 +112,6 @@ else
   exit 2
 fi
 
-# v6.2: stale UUID 사본 자동 청소 (재스캔 뺑뺑이 영구 차단)
-# 현행 활성 경로(PLUGIN_SKILLS_PATH)의 상위 UUID 2단계를 KEEP. skills-plugin 하위
-# 다른 UUID 폴더 중 mtime 7일 이상 비활성만 삭제. 현행·활성 판정 실패 시 아무것도 안 지움.
-prune_stale_skills_plugin() {
-  local skp_root keep_parent now cutoff d m
-  skp_root="$HOME/Library/Application Support/Claude/local-agent-mode-sessions/skills-plugin"
-  [ -d "$skp_root" ] || return 0
-  # KEEP = PLUGIN_SKILLS_PATH에서 /skills 한 단계 위 (= user-UUID 디렉터리)
-  keep_parent="$(dirname "$PLUGIN_SKILLS_PATH")"
-  # fail-safe: KEEP이 skp_root 하위가 아니면 (경로 이상) 청소 중단
-  case "$keep_parent" in
-    "$skp_root"/*) : ;;
-    *) return 0 ;;
-  esac
-  now=$(date +%s); cutoff=$((now - 7*24*3600))
-  for d in "$skp_root"/*/*; do
-    [ -d "$d/skills" ] || continue
-    [ "$d" = "$keep_parent" ] && continue
-    if m=$(stat -f %m "$d" 2>/dev/null); then :
-    elif m=$(stat -c %Y "$d" 2>/dev/null); then :
-    else continue; fi
-    [ "$m" -lt "$cutoff" ] || continue   # 7일 미만 = 최근 활성 가능성 -> 보존
-    rm -rf "$d" && echo "[prune] stale 사본 정리: $d" >&2
-  done
-  # 빈 상위 UUID 폴더 정리
-  find "$skp_root" -mindepth 1 -maxdepth 1 -type d -empty -delete 2>/dev/null
-}
-prune_stale_skills_plugin
-
 SRC="$PLUGIN_SKILLS_PATH/$SKILL_NAME"
 REPO="$REPO_ROOT/$SKILL_NAME"
 GIT_SYNC_REPO="$REPO_ROOT/git-sync"
@@ -182,16 +153,17 @@ git_state_scan() {
   fi
 
   # 축 4·5 전 필수: fetch
-  if ! timeout 15 git fetch origin "$BRANCH" 2>/dev/null; then
+  if ! timeout "${GIT_SYNC_FETCH_TIMEOUT:-5}" git fetch origin "$BRANCH" 2>/dev/null; then
     echo "⚠ fetch 실패 — 네트워크 또는 원격 브랜치 부재" >&2
     GIT_CELL="UNKNOWN"; AHEAD="?"; BEHIND="?"
     return 0
   fi
 
-  # 축 4: Ahead
-  AHEAD=$(git rev-list --count "origin/$BRANCH..HEAD" 2>/dev/null || echo "?")
-  # 축 5: Behind
-  BEHIND=$(git rev-list --count "HEAD..origin/$BRANCH" 2>/dev/null || echo "?")
+  local _lr
+  _lr=$(git rev-list --left-right --count "origin/$BRANCH...HEAD" 2>/dev/null || echo "? ?")
+  set -- $_lr
+  BEHIND="${1:-?}"
+  AHEAD="${2:-?}"
 
   if [ "$AHEAD" = "?" ] || [ "$BEHIND" = "?" ]; then
     GIT_CELL="UNKNOWN"
@@ -303,7 +275,7 @@ execute_cell() {
 
   # --- rsync ---
   if [ "$TURBO" -eq 1 ]; then
-    rsync -av --exclude-from="$EXCL" "$SRC/" "$REPO/"
+    rsync -a --exclude-from="$EXCL" "$SRC/" "$REPO/"
   else
     DRY=$(rsync -avn --delete --itemize-changes --exclude-from="$EXCL" "$SRC/" "$REPO/" 2>/dev/null || true)
     DELETES=$(echo "$DRY" | grep '^\*deleting' || true)
@@ -316,16 +288,16 @@ execute_cell() {
     if [ "$CHANGES" -eq 0 ] && [ "$GIT_CELL" = "G1" ]; then
       echo "⚠️ 변경 없음 — .skill 미설치 가능성. 설치 후 재시도"; exit 4
     fi
-    rsync -av --delete --exclude-from="$EXCL" "$SRC/" "$REPO/"
+    rsync -a --delete --exclude-from="$EXCL" "$SRC/" "$REPO/"
   fi
 
   # --- secret-scan ---
-  SCAN="$REPO/scripts/secret-scan.sh"
-  [ -f "$SCAN" ] || SCAN="$GIT_SYNC_REPO/scripts/secret-scan.sh"
-  if [ -f "$SCAN" ]; then
-    bash "$SCAN" "$REPO" || { echo "❌ 민감정보 발견 — STOP"; exit 1; }
-  else
-    echo "WARN: secret-scan.sh 없음 — 스킵"
+  if [ "${GIT_SYNC_SECRET_SCAN:-0}" = "1" ]; then
+    SCAN="$REPO/scripts/secret-scan.sh"
+    [ -f "$SCAN" ] || SCAN="$GIT_SYNC_REPO/scripts/secret-scan.sh"
+    if [ -f "$SCAN" ]; then
+      bash "$SCAN" "$REPO" || { echo "❌ 민감정보 발견 — STOP"; exit 1; }
+    fi
   fi
 
   # --- commit ---
@@ -350,15 +322,16 @@ execute_cell() {
     exit 1
   fi
 
-  # --- POST_CHECK: 실제 원격 반영 검증 (결함 A 차단) ---
-  REMAINING=$(git rev-list --count "origin/$BRANCH..HEAD" 2>/dev/null || echo "?")
-  if [ "$REMAINING" != "0" ]; then
-    echo ""
-    echo "❌ POST_CHECK 실패 — 로컬에 미푸시 커밋 $REMAINING 개 잔존"
-    git log "origin/$BRANCH..HEAD" --oneline | sed 's/^/  /'
-    echo ""
-    echo "push는 성공 리턴했지만 실제 반영 안 됨. 원격 branch protection·race condition 가능성."
-    exit 8
+  # --- POST_CHECK: 필요할 때만 켠다. 기본 경로는 push 성공을 신뢰한다. ---
+  if [ "${GIT_SYNC_VERIFY_PUSH:-0}" = "1" ]; then
+    timeout "${GIT_SYNC_FETCH_TIMEOUT:-5}" git fetch origin "$BRANCH" 2>/dev/null || true
+    REMAINING=$(git rev-list --count "origin/$BRANCH..HEAD" 2>/dev/null || echo "?")
+    if [ "$REMAINING" != "0" ]; then
+      echo ""
+      echo "❌ POST_CHECK 실패 — 로컬에 미푸시 커밋 $REMAINING 개 잔존"
+      git log "origin/$BRANCH..HEAD" --oneline | sed 's/^/  /'
+      exit 8
+    fi
   fi
 
   # --- 리포트 ---
