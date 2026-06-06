@@ -31,7 +31,7 @@
 
 ## Prerequisites
 
-- **Claude Cowork or Claude Code** environment
+- **Codex app** environment
 {추가 요구사항이 있으면 항목 추가: Obsidian Vault, Web search 등}
 
 ## Goal
@@ -62,20 +62,20 @@
 ## Installation
 
 \`\`\`bash
-git clone https://github.com/jasonnamii/{skill-name}.git ~/.claude/skills/{skill-name}
+git clone https://github.com/jasonnamii/{skill-name}.git ~/.codex/skills/{skill-name}
 \`\`\`
 
 ## Update
 
 \`\`\`bash
-cd ~/.claude/skills/{skill-name} && git pull
+cd ~/.codex/skills/{skill-name} && git pull
 \`\`\`
 
-Skills placed in `~/.claude/skills/` are automatically available in Claude Code and Cowork sessions.
+Skills placed in `~/.codex/skills/` are automatically available in Codex app sessions after restarting Codex.
 
-## Part of Cowork Skills
+## Part of Codex Skills
 
-This is one of 25+ custom skills. See the full catalog: [github.com/jasonnamii/cowork-skills](https://github.com/jasonnamii/cowork-skills)
+This is one of the custom Codex skills installed in the local skill catalog.
 
 ## License
 
@@ -95,7 +95,7 @@ MIT License — feel free to use, modify, and share.
 
 ## 사전 요구
 
-- **Claude Cowork 또는 Claude Code** 환경
+- **Codex 앱** 환경
 {추가 요구사항}
 
 ## 목표
@@ -126,20 +126,20 @@ MIT License — feel free to use, modify, and share.
 ## 설치
 
 \`\`\`bash
-git clone https://github.com/jasonnamii/{skill-name}.git ~/.claude/skills/{skill-name}
+git clone https://github.com/jasonnamii/{skill-name}.git ~/.codex/skills/{skill-name}
 \`\`\`
 
 ## 업데이트
 
 \`\`\`bash
-cd ~/.claude/skills/{skill-name} && git pull
+cd ~/.codex/skills/{skill-name} && git pull
 \`\`\`
 
-`~/.claude/skills/`에 배치된 스킬은 Claude Code 및 Cowork 세션에서 자동으로 사용 가능합니다.
+`~/.codex/skills/`에 배치한 스킬은 Codex 앱 재시작 후 Codex 세션에서 사용할 수 있습니다.
 
-## Cowork Skills
+## Codex Skills
 
-25개 이상의 커스텀 스킬 중 하나입니다. 전체 카탈로그: [github.com/jasonnamii/cowork-skills](https://github.com/jasonnamii/cowork-skills)
+로컬 Codex 스킬 카탈로그에 포함된 커스텀 스킬입니다.
 
 ## 라이선스
 
