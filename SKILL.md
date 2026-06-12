@@ -1,5 +1,6 @@
 ---
 name: git-sync
+version: 1.0
 description: |
   스킬·설정 폴더를 개별 GitHub 레포로 동기화하는 엔진. 파일 3-way·Git 상태 이중 매트릭스로 안전하게 rsync→commit→push, 단일은 Fast Path·배치는 Pre-Flight 후 비파괴→파괴적 순. 스킬·UP 파일을 GitHub에 올리거나 백업·동기화할 때, 스킬 수정·패키징 후 레포에 반영할 때 쓴다. 트리거: 깃동기화, 깃싱크, 깃푸시, 레포 동기화, 스킬 업로드, 새 레포 생성, sync, push, upload. NOT: GitHub Pages 웹배포(→github-deploy), 스킬 내용 수정(→skill-builder), 일반 git 작업(→직접).
 ---
